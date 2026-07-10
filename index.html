@@ -23,8 +23,9 @@
 (function(){
   function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.async=true;s.onload=cb||null;s.onerror=cb||null;document.head.appendChild(s);}
   loadScript('https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js');
-  loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  loadScript('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js');
   loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  loadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js');
 })();
 </script>
 <style>
@@ -560,8 +561,9 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
           <div class="form-group"><label class="form-label">Alamat</label><input type="text" id="set-alamat" class="form-input" placeholder="Alamat..."></div>
           <div class="form-group"><label class="form-label">Nama Kepala Sekolah</label><input type="text" id="set-kepala-sekolah" class="form-input" placeholder="Nama kepala sekolah..."></div>
           <div class="form-group"><label class="form-label">No. WA Kepala Sekolah</label><input type="tel" id="set-nowa-kepala" class="form-input" placeholder="cth: 08123456789" inputmode="tel"></div>
-          <div class="form-group"><label class="form-label">Nama Bendahara 1 (Penerima / Kas Masuk)</label><input type="text" id="set-bendahara" class="form-input" placeholder="Nama Bendahara 1..."></div>
-          <div class="form-group"><label class="form-label">Nama Bendahara 2 (Penyetor / Kas Keluar)</label><input type="text" id="set-bendahara2" class="form-input" placeholder="Nama Bendahara 2..."></div>
+          <div class="form-group"><label class="form-label">Nama Asisten Bendahara (Penerima Setoran Wali Kelas)</label><input type="text" id="set-bendahara" class="form-input" placeholder="Nama Asisten Bendahara..."></div>
+          <div class="form-group"><label class="form-label">Nama Bendahara Pusat (Penerima Setoran Asisten)</label><input type="text" id="set-bendahara2" class="form-input" placeholder="Nama Bendahara Pusat..."></div>
+          <div class="form-group"><label class="form-label">Metode Tanda Tangan Bendahara (pada dokumen cetak)</label><select id="set-ttd-mode" class="form-input"><option value="qr">QR Code</option><option value="manual">Tanda Tangan Manual (Pulpen)</option></select></div>
           <div class="form-group"><label class="form-label">Tahun Ajaran</label><input type="text" id="set-ta" class="form-input" placeholder="cth: 2024/2025"></div>
           <div class="form-group"><label class="form-label">Semester</label><select id="set-semester" class="form-input"><option value="">Pilih Semester...</option><option value="Ganjil">Ganjil</option><option value="Genap">Genap</option></select></div>
           <div class="form-group"><label class="form-label">Nama Bank</label><input type="text" id="set-nama-bank" class="form-input" placeholder="cth: BRI, BNI..."></div>
@@ -603,6 +605,8 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
         <div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--amber-dim);color:var(--amber)"><i class="fas fa-database" style="font-size:11px"></i></div> Data & Backup</div></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
           <div style="height:1px;background:var(--border)"></div>
+          <div id="backup-folder-row" style="display:none;font-size:11px;color:var(--text2);align-items:center;gap:6px"><i class="fas fa-folder" style="color:var(--amber)"></i> <span id="backup-folder-info">Folder belum dipilih</span></div>
+          <button class="btn btn-ghost btn-full" id="btn-pilih-folder" onclick="pilihLokasiBackup()" style="display:none"><i class="fas fa-folder-open"></i> Pilih Lokasi Backup</button>
           <button class="btn btn-warning btn-full" onclick="backupData()"><i class="fas fa-download"></i> Backup Data (JSON)</button>
           <button class="btn btn-ghost btn-full" onclick="document.getElementById('restore-file').click()"><i class="fas fa-upload"></i> Restore Data</button>
           <input type="file" id="restore-file" accept=".json" onchange="restoreData(this)" style="display:none">
@@ -616,7 +620,7 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
     <div class="view" id="view-serahterima">
       <div class="info-box pink" style="margin-bottom:14px">
         <i class="fas fa-exchange-alt"></i>
-        <span>Berita acara serah terima uang antara <b>Bendahara 1</b> (penyetor) dan <b>Bendahara 2</b> (penerima). Dapat dicetak sebagai PDF atau disimpan sebagai PNG.</span>
+        <span>Berita acara serah terima uang antara <b>Asisten Bendahara</b> (penyetor) dan <b>Bendahara Pusat</b> (penerima). Dapat dicetak sebagai PDF atau disimpan sebagai PNG.</span>
       </div>
       <div class="card" style="margin-bottom:12px">
         <div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--pink-dim);color:var(--pink)"><i class="fas fa-file-signature" style="font-size:11px"></i></div> Buat Berita Acara Baru</div></div>
@@ -625,8 +629,8 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
             <div class="form-group"><label class="form-label">Tanggal Serah Terima</label><input type="date" id="st-tanggal" class="form-input"></div>
             <div class="form-group"><label class="form-label">Nomor Surat</label><input type="text" id="st-nomor" class="form-input" placeholder="cth: 001/ST/VI/2025"></div>
           </div>
-          <div class="form-group"><label class="form-label">Bendahara 1 — Penyetor (dari pengaturan)</label><input type="text" id="st-b1" class="form-input" placeholder="Nama Bendahara 1..." readonly style="opacity:.7"></div>
-          <div class="form-group"><label class="form-label">Bendahara 2 — Penerima (dari pengaturan)</label><input type="text" id="st-b2" class="form-input" placeholder="Nama Bendahara 2..." readonly style="opacity:.7"></div>
+          <div class="form-group"><label class="form-label">Asisten Bendahara — Penyetor (dari pengaturan)</label><input type="text" id="st-b1" class="form-input" placeholder="Nama Asisten Bendahara..." readonly style="opacity:.7"></div>
+          <div class="form-group"><label class="form-label">Bendahara Pusat — Penerima (dari pengaturan)</label><input type="text" id="st-b2" class="form-input" placeholder="Nama Bendahara Pusat..." readonly style="opacity:.7"></div>
           <div class="form-group"><label class="form-label">Jumlah Uang Diserahkan (Rp)</label><input type="number" id="st-nominal" class="form-input" placeholder="0" inputmode="numeric" min="0"></div>
           <div class="form-group"><label class="form-label">Terbilang (opsional — otomatis jika kosong)</label><input type="text" id="st-terbilang" class="form-input" placeholder="Contoh: Dua Juta Lima Ratus Ribu Rupiah"></div>
           <div class="form-group"><label class="form-label">Keterangan / Perihal</label><input type="text" id="st-ket" class="form-input" placeholder="cth: Tabungan siswa Semester Ganjil 2024/2025"></div>
@@ -819,6 +823,71 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
 </div>
 
 <!-- SHEET: TAMBAH SISWA -->
+<div class="sheet-bg" id="sheet-tambah-siswa-massal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title"><i class="fas fa-user-plus" style="color:var(--pink)"></i> Tambah Siswa Massal</div>
+      <div class="sheet-close" onclick="closeSheet('sheet-tambah-siswa-massal')"><i class="fas fa-times"></i></div>
+    </div>
+    <div class="sheet-body">
+      <div class="form-group"><label class="form-label">Kelas</label><select id="tsm-kelas" class="form-input"><option value="">Pilih Kelas...</option></select></div>
+      <div class="form-group">
+        <label class="form-label">Nama Siswa (satu nama per baris)</label>
+        <textarea id="tsm-textarea" class="form-input" rows="8" placeholder="Tempel/ketik nama siswa di sini, satu nama per baris. Contoh:
+Ahmad Fauzi
+Budi Santoso
+Citra Dewi"></textarea>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px"><i class="fas fa-info-circle"></i> Tempel (paste) daftar nama, satu nama per baris. Nomor absen akan dibuat otomatis berurutan sesuai urutan nama.</div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeSheet('sheet-tambah-siswa-massal')">Batal</button>
+      <button class="btn btn-primary" style="flex:2;justify-content:center" onclick="saveSiswaMassal()"><i class="fas fa-save"></i> Simpan Semua</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: DAFTAR SISWA -->
+<div class="sheet-bg" id="sheet-daftar-siswa">
+  <div class="sheet" style="max-height:88vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title"><i class="fas fa-list-ul" style="color:var(--pink)"></i> <span id="ds-kelas-nama">Daftar Siswa</span></div>
+      <div class="sheet-close" onclick="closeSheet('sheet-daftar-siswa')"><i class="fas fa-times"></i></div>
+    </div>
+    <div class="sheet-body">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-weight:700" id="ds-jml-siswa"></div>
+      <div id="ds-siswa-list"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-primary btn-full" onclick="openTambahSiswaSheet(dsCurrentKelasId)"><i class="fas fa-user-plus"></i> Tambah Siswa</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: TAMBAH SISWA MANUAL -->
+<div class="sheet-bg" id="sheet-tambah-siswa">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title"><i class="fas fa-user-plus" style="color:var(--pink)"></i> Tambah Siswa</div>
+      <div class="sheet-close" onclick="closeSheet('sheet-tambah-siswa')"><i class="fas fa-times"></i></div>
+    </div>
+    <div class="sheet-body">
+      <div class="form-group"><label class="form-label">Kelas</label><select id="ts-kelas" class="form-input"><option value="">Pilih Kelas...</option></select></div>
+      <div class="form-group"><label class="form-label">Nama Siswa</label><input type="text" id="ts-nama" class="form-input" placeholder="Nama lengkap siswa"></div>
+      <div class="grid2">
+        <div class="form-group"><label class="form-label">No. Absen</label><input type="number" id="ts-absen" class="form-input" placeholder="0" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label">NIS (opsional)</label><input type="text" id="ts-nis" class="form-input" placeholder="NIS"></div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeSheet('sheet-tambah-siswa')">Batal</button>
+      <button class="btn btn-primary" style="flex:2;justify-content:center" onclick="saveSiswa()"><i class="fas fa-save"></i> Simpan</button>
+    </div>
+  </div>
+</div>
 
 <!-- SHEET: DETAIL SISWA -->
 <div class="modal-bg" id="sheet-detail-siswa">
@@ -826,6 +895,8 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
     <div class="modal-header">
       <div class="modal-title"><i class="fas fa-user" style="color:var(--pink)"></i> Detail Tabungan</div>
       <div style="display:flex;gap:8px">
+        <button class="btn btn-warning btn-sm" onclick="editSiswa(currentDetailSiswaId)" title="Edit Nama Siswa"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSiswa(currentDetailSiswaId)" title="Hapus Siswa"><i class="fas fa-trash"></i></button>
         <button class="btn btn-warning btn-sm" onclick="cetakDetailSiswa()"><i class="fas fa-print"></i></button>
         <button class="btn btn-ghost btn-sm" onclick="exportPNGDetailSiswa()"><i class="fas fa-image"></i></button>
         <div class="sheet-close" onclick="closeSheet('sheet-detail-siswa')"><i class="fas fa-times"></i></div>
@@ -845,7 +916,7 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
     </div>
     <div class="sheet-body">
       <div class="form-group"><label class="form-label">Kelas</label><select id="sk-kelas" class="form-input" onchange="updateSKInfo()"><option value="">Pilih Kelas...</option></select></div>
-      <div id="sk-info-box" style="display:none;margin-bottom:12px"><div class="info-box pink"><i class="fas fa-info-circle"></i><div><div><b>Wali:</b> <span id="sk-info-wali">-</span></div><div><b>Siswa:</b> <span id="sk-info-jml">0</span> orang</div></div></div></div>
+      <div id="sk-info-box" style="display:none;margin-bottom:12px"><div class="info-box pink"><i class="fas fa-info-circle"></i><div><div><b>Wali:</b> <span id="sk-info-wali">-</span></div><div><b>Siswa:</b> <span id="sk-info-jml">0</span> orang</div><div><b>Belum Disetor:</b> <span id="sk-info-belum" style="font-family:monospace">Rp 0</span></div></div></div></div>
       <div class="form-group">
         <label class="form-label">Jenis Setoran</label>
         <div class="toggle-row">
@@ -972,7 +1043,7 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
 <script>
 let state={settings:{namaSekolah:'',npsn:'',alamat:'',kepalaSekolah:'',noWaKepala:'',bendahara:'',ta:'',semester:'',namaBank:'',noRek:''},kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru:[]};
 let _waPendingPayload=null;
-let currentView='dashboard',currentTrxJenis='setor',distribusiTarget=null,currentMgmtTab='kelas',currentLapTab='mutasi',currentRekapTab='kelas',currentDetailSiswaId=null;
+let currentView='dashboard',currentTrxJenis='setor',distribusiTarget=null,currentMgmtTab='kelas',currentLapTab='mutasi',currentRekapTab='kelas',currentDetailSiswaId=null,dsCurrentKelasId=null;
 let tabSaldoKelasId=null;
 
 // ===================== INIT =====================
@@ -993,6 +1064,7 @@ function init(){
   // Splash hilang setelah 1.5 detik, atau lebih cepat jika user tap
   setTimeout(hideSplash,1500);
   setTimeout(checkBackupReminder,2500);
+  initBackupDirHandle();
 }
 
 function loadData(){
@@ -1008,6 +1080,7 @@ function loadData(){
   if(!state.settings.noRek)state.settings.noRek='';
   if(!state.settings.semester)state.settings.semester='';
   if(!state.settings.bendahara2)state.settings.bendahara2='';
+  if(!state.settings.ttdMode)state.settings.ttdMode='qr';
   if(state.settings.kepalaSekolah===undefined)state.settings.kepalaSekolah='';
   if(state.settings.noWaKepala===undefined)state.settings.noWaKepala='';
   loadSettings();
@@ -1016,11 +1089,11 @@ function saveData(){localStorage.setItem('tabbend_v2',JSON.stringify(state));}
 
 function loadSettings(){
   const s=state.settings;
-  ['set-nama-sekolah','set-npsn','set-alamat','set-kepala-sekolah','set-nowa-kepala','set-bendahara','set-bendahara2','set-ta','set-semester','set-nama-bank','set-no-rek'].forEach(id=>{
+  ['set-nama-sekolah','set-npsn','set-alamat','set-kepala-sekolah','set-nowa-kepala','set-bendahara','set-bendahara2','set-ttd-mode','set-ta','set-semester','set-nama-bank','set-no-rek'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
-    const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek'};
-    el.value=s[keys[id]]||'';
+    const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek'};
+    el.value=s[keys[id]]||(id==='set-ttd-mode'?'qr':'');
   });
   const hSub=document.getElementById('h-sekolah');
   if(hSub)hSub.textContent=s.namaSekolah||'Bendahara Sekolah';
@@ -1031,7 +1104,7 @@ function loadSettings(){
 }
 
 function saveSettings(){
-  const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek'};
+  const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek'};
   Object.entries(keys).forEach(([id,key])=>{const el=document.getElementById(id);if(el)state.settings[key]=el.value;});
   saveData();loadSettings();toast('Pengaturan disimpan!','success');
 }
@@ -1060,12 +1133,52 @@ const todayStr=()=>new Date().toISOString().split('T')[0];
 const fmtDate=d=>{if(!d)return'-';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
 const fmtRp=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
 const genId=()=>'_'+Math.random().toString(36).substr(2,9);
+function toTitleCase(str){return str.replace(/\s+/g,' ').trim().split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');}
 const getKelas=id=>state.kelas.find(k=>k.id===id)||{};
 const getSiswa=id=>state.siswa.find(s=>s.id===id)||{};
 const getTrxBySiswa=id=>state.transaksi.filter(t=>t.siswaId===id).sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.createdAt-b.createdAt);
 const getSaldoSiswa=id=>getTrxBySiswa(id).reduce((s,t)=>t.jenis!=='tarik'?s+t.nominal:s-t.nominal,0);
 const getTotalSetor=id=>state.transaksi.filter(t=>t.siswaId===id&&t.jenis!=='tarik').reduce((s,t)=>s+t.nominal,0);
 const getTotalTarik=id=>state.transaksi.filter(t=>t.siswaId===id&&t.jenis==='tarik').reduce((s,t)=>s+t.nominal,0);
+const getTotalTabunganSiswaKelas=kelasId=>state.siswa.filter(s=>s.kelasId===kelasId).reduce((sum,s)=>sum+getSaldoSiswa(s.id),0);
+const getTotalSudahDisetorKelas=kelasId=>(state.setoranKelas||[]).filter(sk=>sk.kelasId===kelasId).reduce((sum,sk)=>sum+sk.nominal,0);
+const getBelumDisetorKelas=kelasId=>Math.max(0,getTotalTabunganSiswaKelas(kelasId)-getTotalSudahDisetorKelas(kelasId));
+function getStatusSetoranKelas(kelasId){
+  const belum=getBelumDisetorKelas(kelasId);
+  const setoranList=(state.setoranKelas||[]).filter(sk=>sk.kelasId===kelasId);
+  const lastSetorTgl=setoranList.length?setoranList.reduce((max,sk)=>sk.tanggal>max?sk.tanggal:max,setoranList[0].tanggal):null;
+  // Acuan hari berjalan: sejak setor terakhir, atau sejak tabungan siswa pertama kalau belum pernah setor sama sekali
+  let acuanTgl=lastSetorTgl;
+  if(!acuanTgl){
+    const siswaIds=new Set(state.siswa.filter(s=>s.kelasId===kelasId).map(s=>s.id));
+    const trxKelas=state.transaksi.filter(t=>siswaIds.has(t.siswaId)&&t.jenis!=='tarik');
+    if(trxKelas.length)acuanTgl=trxKelas.reduce((min,t)=>t.tanggal<min?t.tanggal:min,trxKelas[0].tanggal);
+  }
+  let hariBerjalan=null;
+  if(acuanTgl){
+    const d1=new Date(acuanTgl+'T00:00:00'),d2=new Date();d2.setHours(0,0,0,0);
+    hariBerjalan=Math.max(0,Math.round((d2-d1)/86400000));
+  }
+  let urgensi='lunas';
+  if(belum>0){
+    if(hariBerjalan===null||hariBerjalan<3)urgensi='baru';
+    else if(hariBerjalan<7)urgensi='kuning';
+    else urgensi='merah';
+  }
+  return{belum,lastSetorTgl,hariBerjalan,urgensi};
+}
+function renderStatusSetoranBadgeHTML(kelasId){
+  const st=getStatusSetoranKelas(kelasId);
+  let statusBadge;
+  if(st.urgensi==='lunas'){
+    statusBadge=`<span class="badge badge-green"><i class="fas fa-check-circle"></i> Lunas</span>`;
+  }else{
+    const cls=st.urgensi==='merah'?'badge-red':st.urgensi==='kuning'?'badge-amber':'badge-blue';
+    statusBadge=`<span class="badge ${cls}"><i class="fas fa-clock"></i> Belum Setor ${fmtRp(st.belum)}</span>`;
+  }
+  const terakhirSetorTxt=st.lastSetorTgl?`Setor terakhir: ${st.hariBerjalan===0?'hari ini':st.hariBerjalan+' hari lalu'}`:(st.hariBerjalan!==null?`Belum pernah setor · ${st.hariBerjalan} hari berjalan`:'Belum pernah setor');
+  return{statusBadge,terakhirSetorTxt};
+}
 const getRunningBalance=(sId,upToId)=>{const trxs=getTrxBySiswa(sId);let s=0;for(const t of trxs){s+=t.jenis!=='tarik'?t.nominal:-t.nominal;if(t.id===upToId)break;}return s;};
 const getSaldoBank=()=>(state.kasTransaksi||[]).reduce((s,k)=>k.jenis==='setor_bank'?s+k.nominal:k.jenis==='tarik_bank'?s-k.nominal:s,0);
 const getSaldoTunai=()=>(state.kasTransaksi||[]).reduce((s,k)=>k.jenis==='masuk_tunai'?s+k.nominal:k.jenis==='keluar_tunai'?s-k.nominal:s,0);
@@ -1202,7 +1315,7 @@ function populateSelects(){
   const kelasList=[...state.kelas].sort((a,b)=>a.nama.localeCompare(b.nama,undefined,{numeric:true,sensitivity:'base'}));
   const siswaList=[...state.siswa].sort((a,b)=>(getKelas(a.kelasId).nama||'').localeCompare(getKelas(b.kelasId).nama||'')||a.absen-b.absen);
 
-  ['ts-kelas','sk-kelas'].forEach(sid=>{
+  ['ts-kelas','sk-kelas','tsm-kelas'].forEach(sid=>{
     const el=$(sid);if(!el)return;
     const prev=el.value;
     el.innerHTML='<option value="">Pilih Kelas...</option>';
@@ -1303,7 +1416,7 @@ function renderDashboard(){
           <div style="font-size:9px;color:var(--text3);margin-top:4px">${jmlSetoranKelas}× · ${kelasYgSetor} kelas</div>
         </div>
         <div onclick="switchView('serahterima')" style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:10px 8px;text-align:center;cursor:pointer">
-          <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--purple);margin-bottom:5px">Keluar: Ke Bendahara 2</div>
+          <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--purple);margin-bottom:5px">Keluar: Ke Bendahara Pusat</div>
           <div style="font-size:12px;font-weight:900;font-family:monospace;color:var(--purple);line-height:1.2">${fmtRp(totalSerahTerima)}</div>
           <div style="font-size:9px;color:var(--text3);margin-top:4px">${jmlSerahTerima>0?jmlSerahTerima+'× serah terima':'Belum ada'}</div>
         </div>
@@ -1480,9 +1593,10 @@ function renderTabunganList(){
     el.innerHTML=kelasList.map(k=>{
       const siswaKelas=state.siswa.filter(s=>s.kelasId===k.id);
       const jml=siswaKelas.length;
-      // Saldo dari transaksi per siswa (termasuk distribusi setor kelas)
-      const totalSaldo=getSaldoKelas(k.id);
+      // Saldo dari transaksi per siswa (total tabungan siswa di kelas ini)
+      const totalSaldo=getTotalTabunganSiswaKelas(k.id);
       const jmlSetor=(state.setoranKelas||[]).filter(sk=>sk.kelasId===k.id).length;
+      const {statusBadge,terakhirSetorTxt}=renderStatusSetoranBadgeHTML(k.id);
       return`<div class="list-item" onclick="openKelasSaldo('${k.id}')" style="cursor:pointer">
         <div class="list-item-avatar" style="background:${getAvatarBg(k.nama)}">${k.nama?.substring(0,2)||'?'}</div>
         <div class="list-item-info">
@@ -1490,10 +1604,18 @@ function renderTabunganList(){
           <div class="list-item-sub">Wali Kelas: ${k.wali||'-'}</div>
           <div style="margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span class="saldo-chip${totalSaldo<=0?' zero':''}">${fmtRp(totalSaldo)}</span>
+            <span style="font-size:9px;color:var(--text3)"><i class="fas fa-users" style="margin-right:2px"></i>${jml} siswa</span>
             ${jmlSetor>0?`<span style="font-size:9px;color:var(--text3)">${jmlSetor}x setoran</span>`:''}
           </div>
+          <div style="margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            ${statusBadge}
+            <span style="font-size:9px;color:var(--text3)">${terakhirSetorTxt}</span>
+          </div>
         </div>
-        <i class="fas fa-chevron-right" style="color:var(--text3);font-size:11px;flex-shrink:0"></i>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0">
+          <button class="btn btn-primary btn-xs btn-icon" onclick="event.stopPropagation();openSetoranKelasSheet('${k.id}')" title="Setor ke Bendahara"><i class="fas fa-hand-holding-dollar"></i></button>
+          <i class="fas fa-chevron-right" style="color:var(--text3);font-size:11px"></i>
+        </div>
       </div>`;
     }).join('');
     hideFab();
@@ -1502,9 +1624,24 @@ function renderTabunganList(){
 
   // ===== MODE: DAFTAR SISWA DALAM KELAS =====
   const k=getKelas(tabSaldoKelasId);
+  const {statusBadge:kStatusBadge,terakhirSetorTxt:kTerakhirSetorTxt}=renderStatusSetoranBadgeHTML(tabSaldoKelasId);
   if(backbar){
     backbar.style.display='flex';
-    backbar.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="closeKelasSaldo()"><i class="fas fa-arrow-left"></i> Kelas</button><span style="font-size:12px;font-weight:700;color:var(--text)">${k.nama||''}</span>`;
+    backbar.style.flexWrap='wrap';
+    backbar.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="closeKelasSaldo()"><i class="fas fa-arrow-left"></i> Kelas</button><span style="font-size:12px;font-weight:700;color:var(--text)">${k.nama||''}</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <input type="month" id="lsb-bulan" class="form-input" style="font-size:11px;padding:6px 8px;width:118px" value="${new Date().toISOString().slice(0,7)}">
+        <button class="btn btn-warning btn-xs btn-icon" onclick="cetakLaporanSetoranBulan()" title="Cetak Laporan Setoran Bulan"><i class="fas fa-print"></i></button>
+        <button class="btn btn-ghost btn-xs btn-icon" onclick="exportPNGLaporanSetoranBulan()" title="Simpan PNG Laporan Setoran" style="background:var(--blue-dim);color:var(--blue)"><i class="fas fa-image"></i></button>
+        <select id="th-kertas" class="form-input" style="font-size:11px;padding:6px 4px;width:62px" title="Ukuran Kertas Tabungan Harian">
+          <option value="A4">A4</option>
+          <option value="F4">F4</option>
+        </select>
+        <button class="btn btn-primary btn-xs btn-icon" onclick="cetakTabunganHarian()" title="Cetak PDF Tabungan Harian Sebulan"><i class="fas fa-calendar-days"></i></button>
+        <button class="btn btn-ghost btn-xs btn-icon" onclick="exportPNGTabunganHarian()" title="Simpan PNG Tabungan Harian Sebulan" style="background:var(--green-dim);color:var(--green)"><i class="fas fa-image"></i></button>
+        <button class="btn btn-ghost btn-xs btn-icon" onclick="exportExcelTabunganHarian()" title="Export Excel Tabungan Harian Sebulan" style="background:var(--green-dim);color:var(--green)"><i class="fas fa-file-excel"></i></button>
+      </div>
+      <div style="width:100%;margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${kStatusBadge}<span style="font-size:9px;color:var(--text3)">${kTerakhirSetorTxt}</span></div>`;
   }
   if($('tab-search'))$('tab-search').placeholder='Cari nama siswa...';
   const siswaKelas=[...state.siswa]
@@ -1569,6 +1706,10 @@ function renderRiwayatAll(){
         <div class="trx-card-amount">
           <div class="trx-card-val" style="color:${iS?'var(--green)':'var(--red)'}">${iS?'+':'−'}${fmtRp(t.nominal)}</div>
           <div class="trx-card-saldo">→${fmtRp(saldo)}</div>
+        </div>
+        <div style="display:flex;gap:4px;margin-left:8px">
+          <button class="btn btn-ghost btn-icon btn-xs" onclick="editTrx('${t.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-danger btn-icon btn-xs" onclick="deleteTrx('${t.id}',false,'${t.siswaId}')"><i class="fas fa-trash"></i></button>
         </div>
       </div>
     </div>`;
@@ -1757,14 +1898,27 @@ function getPrintStyles(){
     .sc-purple .sc-val{color:#7c3aed;}
     .ttd-row{display:flex;justify-content:space-between;margin-top:40px;}
     .ttd-box{width:44%;text-align:center;font-size:9pt;}
-    .ttd-title{font-weight:600;color:#64748b;margin-bottom:60px;}
+    .ttd-title{font-weight:600;color:#64748b;margin-bottom:6px;}
+    .ttd-gap{height:56px;display:flex;align-items:center;justify-content:center;}
     .ttd-line{border-top:2px solid #1e293b;padding-top:5px;font-weight:800;color:#1e293b;}
+    .ttd-qr{width:46px;height:46px;}
+    .ttd-qr svg{width:100%;height:100%;display:block;}
     .footer{margin-top:16px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:7.5pt;color:#94a3b8;display:flex;justify-content:space-between;}
   `;
 }
 
 function fmtRpPrint(n){return'Rp '+Number(n||0).toLocaleString('id-ID');}
 function fmtDatePrint(d){if(!d)return'-';const[y,m,t]=d.split('-');const bn=['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];return`${t} ${bn[+m]||m} ${y}`;}
+function qrSvgTag(text){
+  // Membuat QR code sebagai SVG inline (offline, tanpa request gambar ke server)
+  try{
+    if(typeof qrcode==='undefined')return'';
+    const qr=qrcode(0,'M');
+    qr.addData(String(text||''));
+    qr.make();
+    return qr.createSvgTag({scalable:true});
+  }catch(e){return'';}
+}
 
 function cetakDetailSiswa(){
   const s=state.settings;
@@ -1790,8 +1944,8 @@ function cetakDetailSiswa(){
     </tr>`;
   }).join('');
   const ttd=`<div class="ttd-row">
-    <div class="ttd-box"><div class="ttd-title">Wali Kelas</div><div class="ttd-line">${kelas?.wali||'(................................)'}</div></div>
-    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
+    <div class="ttd-box"><div class="ttd-title">Wali Kelas</div><div class="ttd-gap"></div><div class="ttd-line">${kelas?.wali||'(................................)'}</div></div>
+    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
   </div>`;
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Buku Tabungan - ${siswa.nama}</title>
   <style>${getPrintStyles()}</style></head><body>
@@ -1845,20 +1999,43 @@ function renderKelas(){
   const el=$('kelas-list-card');
   if(!state.kelas.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🏫</div><p>Belum ada kelas. Tambahkan di bawah.</p></div>';return;}
   el.innerHTML='<div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--pink-dim);color:var(--pink)"><i class="fas fa-school" style="font-size:11px"></i></div> Daftar Kelas</div></div>'+[...state.kelas].sort((a,b)=>a.nama.localeCompare(b.nama,undefined,{numeric:true,sensitivity:'base'})).map(k=>{
-    const jml=0,totalSaldo=getSaldoKelas(k.id);
+    const jml=state.siswa.filter(s=>s.kelasId===k.id).length,totalSaldo=getSaldoKelas(k.id);
     return`<div class="kelas-card">
       <div class="kelas-avatar">${k.nama?.substring(0,3)||'?'}</div>
       <div class="kelas-info">
         <div class="kelas-name">${k.nama}</div>
-        <div class="kelas-sub">Wali: ${k.wali||'-'}</div>
+        <div class="kelas-sub">Wali: ${k.wali||'-'} · ${jml} siswa</div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px">Saldo: ${fmtRp(totalSaldo)}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px">
+        <button class="btn btn-primary btn-xs btn-icon" onclick="openDaftarSiswaSheet('${k.id}')" title="Daftar Siswa"><i class="fas fa-list-ul"></i></button>
+        <button class="btn btn-primary btn-xs btn-icon" onclick="openTambahSiswaSheet('${k.id}')" title="Tambah Siswa (Satu-satu)"><i class="fas fa-user-plus"></i></button>
+        <button class="btn btn-success btn-xs btn-icon" onclick="openTambahSiswaMassalSheet('${k.id}')" title="Tambah Siswa Massal"><i class="fas fa-users"></i></button>
         <button class="btn btn-warning btn-xs btn-icon" onclick="editKelas('${k.id}')" title="Edit Kelas"><i class="fas fa-pen"></i></button>
         <button class="btn btn-danger btn-xs btn-icon" onclick="deleteKelas('${k.id}')" title="Hapus Kelas"><i class="fas fa-trash"></i></button>
       </div>
     </div>`;
   }).join('');
+}
+function openDaftarSiswaSheet(kelasId){
+  dsCurrentKelasId=kelasId;
+  const k=getKelas(kelasId);
+  const siswaKelas=state.siswa.filter(s=>s.kelasId===kelasId).sort((a,b)=>(a.absen||0)-(b.absen||0));
+  $('ds-kelas-nama').textContent='Daftar Siswa '+(k?.nama||'-');
+  $('ds-jml-siswa').textContent=siswaKelas.length+' siswa · Wali: '+(k?.wali||'-');
+  $('ds-siswa-list').innerHTML=siswaKelas.length?siswaKelas.map(s=>`
+    <div class="list-item">
+      <div class="list-item-avatar" style="background:var(--pink-dim);color:var(--pink);font-size:12px">${s.absen||'?'}</div>
+      <div class="list-item-info">
+        <div class="list-item-name">${s.nama}</div>
+        <div style="font-size:10px;color:var(--text3)">NIS: ${s.nis||'-'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-warning btn-xs btn-icon" onclick="editSiswa('${s.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-danger btn-xs btn-icon" onclick="deleteSiswa('${s.id}')" title="Hapus"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`).join(''):'<div class="empty-state"><div class="empty-icon">🧑‍🎓</div><p>Belum ada siswa di kelas ini</p></div>';
+  openSheet('sheet-daftar-siswa');
 }
 function tambahKelas(){
   const nama=$('new-kelas-nama').value.trim(),wali=$('new-kelas-wali').value.trim();
@@ -1913,17 +2090,76 @@ function openTambahSiswaSheet(kelasId=''){
   openSheet('sheet-tambah-siswa');
 }
 function saveSiswa(){
-  const nama=$('ts-nama').value.trim(),absen=$('ts-absen').value,kelasId=$('ts-kelas').value,nis=$('ts-nis').value.trim();
+  const nama=toTitleCase($('ts-nama').value.trim()),absen=$('ts-absen').value,kelasId=$('ts-kelas').value,nis=$('ts-nis').value.trim();
   if(!nama){toast('Masukkan nama siswa!','error');return;}
   if(!kelasId){toast('Pilih kelas!','error');return;}
   state.siswa.push({id:genId(),nama,absen:parseInt(absen)||0,kelasId,nis});
-  saveData();closeSheet('sheet-tambah-siswa');populateSelects();renderView(currentView);toast('Siswa ditambahkan!','success');
+  saveData();closeSheet('sheet-tambah-siswa');populateSelects();renderView(currentView);
+  if(document.getElementById('sheet-daftar-siswa')?.classList.contains('open')&&dsCurrentKelasId)openDaftarSiswaSheet(dsCurrentKelasId);
+  toast('Siswa ditambahkan!','success');
 }
 function deleteSiswa(sId){
   const s=getSiswa(sId),jmlTrx=state.transaksi.filter(t=>t.siswaId===sId).length;
   Swal.fire({title:'Hapus Siswa?',html:`Hapus <b>${s.nama}</b>?${jmlTrx?` <span style="color:#f87171">${jmlTrx} transaksi ikut terhapus!</span>`:''}`,icon:'warning',showCancelButton:true,confirmButtonText:'Hapus',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#dc2626'}).then(r=>{
-    if(r.isConfirmed){state.transaksi=state.transaksi.filter(t=>t.siswaId!==sId);state.siswa=state.siswa.filter(s=>s.id!==sId);saveData();renderView(currentView);populateSelects();toast('Siswa dihapus!','success');}
+    if(r.isConfirmed){state.transaksi=state.transaksi.filter(t=>t.siswaId!==sId);state.siswa=state.siswa.filter(s=>s.id!==sId);saveData();closeSheet('sheet-detail-siswa');if(document.getElementById('sheet-daftar-siswa')?.classList.contains('open')&&dsCurrentKelasId)openDaftarSiswaSheet(dsCurrentKelasId);renderView(currentView);populateSelects();toast('Siswa dihapus!','success');}
   });
+}
+function editSiswa(sId){
+  const s=getSiswa(sId);if(!s)return;
+  const esc=v=>(v||'').toString().replace(/"/g,'&quot;');
+  Swal.fire({
+    title:'Edit Siswa',
+    html:`<div style="text-align:left">
+      <div class="form-group"><label class="form-label">Nama Siswa</label><input id="swal-edit-siswa-nama" class="form-input" value="${esc(s.nama)}"></div>
+      <div class="form-group"><label class="form-label">No. Absen</label><input id="swal-edit-siswa-absen" type="number" class="form-input" value="${esc(s.absen)}"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">NIS</label><input id="swal-edit-siswa-nis" class="form-input" value="${esc(s.nis)}"></div>
+    </div>`,
+    showCancelButton:true,
+    confirmButtonText:'Simpan',
+    cancelButtonText:'Batal',
+    background:'var(--surface)',
+    color:'var(--text)',
+    confirmButtonColor:'#db2777',
+    focusConfirm:false,
+    preConfirm:()=>{
+      const nama=toTitleCase(document.getElementById('swal-edit-siswa-nama').value.trim());
+      const absen=document.getElementById('swal-edit-siswa-absen').value;
+      const nis=document.getElementById('swal-edit-siswa-nis').value.trim();
+      if(!nama){Swal.showValidationMessage('Nama siswa wajib diisi');return false;}
+      return{nama,absen,nis};
+    }
+  }).then(r=>{
+    if(r.isConfirmed){
+      s.nama=r.value.nama;s.absen=parseInt(r.value.absen)||0;s.nis=r.value.nis;
+      saveData();populateSelects();
+      if(document.getElementById('sheet-detail-siswa')?.classList.contains('open'))openDetailSiswa(sId);
+      if(document.getElementById('sheet-daftar-siswa')?.classList.contains('open')&&dsCurrentKelasId)openDaftarSiswaSheet(dsCurrentKelasId);
+      renderView(currentView);
+      toast('Siswa berhasil diperbarui!','success');
+    }
+  });
+}
+
+// ===================== TAMBAH SISWA MASSAL (COPY PASTE) =====================
+function openTambahSiswaMassalSheet(kelasId=''){
+  populateSelects();
+  $('tsm-textarea').value='';
+  const sel=$('tsm-kelas');if(sel)sel.value=kelasId;
+  openSheet('sheet-tambah-siswa-massal');
+}
+function saveSiswaMassal(){
+  const kelasId=$('tsm-kelas').value;
+  if(!kelasId){toast('Pilih kelas dulu!','error');return;}
+  const namaList=$('tsm-textarea').value.split('\n').map(n=>toTitleCase(n.trim())).filter(n=>n.length>0);
+  if(!namaList.length){toast('Tempel/isi minimal satu nama siswa!','error');return;}
+  const existing=state.siswa.filter(s=>s.kelasId===kelasId);
+  let nextAbsen=existing.length?Math.max(...existing.map(s=>s.absen||0))+1:1;
+  namaList.forEach(nama=>{
+    state.siswa.push({id:genId(),nama,absen:nextAbsen,kelasId,nis:''});
+    nextAbsen++;
+  });
+  saveData();closeSheet('sheet-tambah-siswa-massal');populateSelects();renderView(currentView);
+  toast(namaList.length+' siswa berhasil ditambahkan!','success');
 }
 
 // ===================== SETORAN KELAS =====================
@@ -1948,10 +2184,11 @@ function renderSetoranKelas(){
     </div>`;
   }).join('');
 }
-function openSetoranKelasSheet(){
+function openSetoranKelasSheet(kelasId=''){
   populateSelects();
   $('sk-kelas').value='';$('sk-nominal').value='';$('sk-ket').value='';$('sk-tanggal').value=todayStr();
   $('sk-info-box').style.display='none';setSKMode('bank');
+  if(kelasId){$('sk-kelas').value=kelasId;updateSKInfo();}
   openSheet('sheet-setoran-kelas');
 }
 function setSKMode(mode){
@@ -1968,6 +2205,7 @@ function updateSKInfo(){
   const k=getKelas(kId);
   $('sk-info-wali').textContent=k.wali||'-';
   $('sk-info-jml').textContent=state.siswa.filter(s=>s.kelasId===kId).length;
+  $('sk-info-belum').textContent=fmtRp(getBelumDisetorKelas(kId));
   $('sk-info-box').style.display='block';
 }
 function saveSetoranKelas(){
@@ -1975,6 +2213,8 @@ function saveSetoranKelas(){
   if(!kelasId){toast('Pilih kelas!','error');return;}
   if(!nominal||nominal<=0){toast('Masukkan nominal!','error');return;}
   if(!tanggal){toast('Masukkan tanggal!','error');return;}
+  const belumDisetor=getBelumDisetorKelas(kelasId);
+  if(nominal>belumDisetor){toast('Nominal melebihi tabungan yang belum disetor ('+fmtRp(belumDisetor)+')!','error');return;}
   const skId=genId();
   state.setoranKelas.push({id:skId,kelasId,tanggal,nominal,ket,mode,distribusi:[],createdAt:Date.now()});
   if(!state.kasTransaksi)state.kasTransaksi=[];
@@ -1982,7 +2222,22 @@ function saveSetoranKelas(){
   const jenisKas=mode==='bank'?'setor_bank':'masuk_tunai';
   const labelKas=mode==='bank'?'Transfer Bank':'Tunai';
   state.kasTransaksi.push({id:genId(),jenis:jenisKas,nominal,tanggal,ket:'Setoran kelas '+(k.nama||'')+(ket?' - '+ket:''),sumberSetoran:skId,createdAt:Date.now()});
-  saveData();closeSheet('sheet-setoran-kelas');renderSetoranKelas();toast('Setoran dicatat & masuk Kas '+labelKas+'!','success');
+  saveData();closeSheet('sheet-setoran-kelas');renderSetoranKelas();
+  if(tabSaldoKelasId)renderTabunganList();
+  toast('Setoran dicatat & masuk Kas '+labelKas+'!','success');
+  Swal.fire({
+    title:'Setoran Tersimpan!',
+    text:'Cetak bukti serah terima tabungan sekarang?',
+    icon:'success',
+    showCancelButton:true,
+    confirmButtonText:'<i class="fas fa-print"></i> Cetak PDF',
+    cancelButtonText:'Nanti saja',
+    background:'var(--surface)',
+    color:'var(--text)',
+    confirmButtonColor:'#db2777'
+  }).then(r=>{
+    if(r.isConfirmed)cetakSerahanKelas(skId);
+  });
 }
 function deleteSetoranKelas(skId){
   Swal.fire({title:'Hapus Setoran?',text:'Data setoran kelas akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonText:'Hapus',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#dc2626'}).then(r=>{
@@ -2019,7 +2274,8 @@ function _buildSerahanKelasHTML(skId){
     .ttd-row{display:flex;justify-content:space-between;margin-top:36px;gap:20px;}
     .ttd-box{flex:1;text-align:center;}
     .ttd-label{font-size:8pt;color:#64748b;font-weight:600;margin-bottom:4px;}
-    .ttd-place{font-size:8pt;color:#94a3b8;margin-bottom:56px;}
+    .ttd-place{font-size:8pt;color:#94a3b8;margin-bottom:4px;}
+    .ttd-gap{height:56px;display:flex;align-items:center;justify-content:center;}
     .ttd-line{border-top:2px solid #1e293b;padding-top:5px;font-weight:800;font-size:9.5pt;color:#1e293b;}
     .ttd-jabatan{font-size:7.5pt;color:#64748b;margin-top:2px;}
     .chip-setor{display:inline-block;background:#dcfce7;color:#16a34a;font-weight:700;border-radius:4px;padding:2px 8px;font-size:8pt;}
@@ -2060,12 +2316,14 @@ function _buildSerahanKelasHTML(skId){
     <div class="ttd-box">
       <div class="ttd-label">Yang Menyerahkan</div>
       <div class="ttd-place">${s.namaSekolah?s.namaSekolah+', ':''} ${tanggalPanjang}</div>
+      <div class="ttd-gap"></div>
       <div class="ttd-line">${k.wali||'(................................)'}</div>
       <div class="ttd-jabatan">Wali Kelas ${k.nama||''}</div>
     </div>
     <div class="ttd-box">
       <div class="ttd-label">Yang Menerima</div>
       <div class="ttd-place">&nbsp;</div>
+      <div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div>
       <div class="ttd-line">${s.bendahara||'(................................)'}</div>
       <div class="ttd-jabatan">Bendahara Penerima</div>
     </div>
@@ -2294,7 +2552,8 @@ function _buildSerahanPinjamanHTML(pjId){
     .ttd-row-2{display:flex;justify-content:space-between;margin-top:36px;gap:20px;}
     .ttd-box{flex:1;text-align:center;}
     .ttd-lbl{font-size:8pt;color:#64748b;font-weight:600;margin-bottom:4px;}
-    .ttd-place-txt{font-size:8pt;color:#94a3b8;margin-bottom:52px;}
+    .ttd-place-txt{font-size:8pt;color:#94a3b8;margin-bottom:4px;}
+    .ttd-gap{height:52px;display:flex;align-items:center;justify-content:center;}
     .ttd-line{border-top:2px solid #1e293b;padding-top:5px;font-weight:800;font-size:9.5pt;color:#1e293b;}
     .ttd-jabatan{font-size:7.5pt;color:#64748b;margin-top:2px;}
   </style></head><body>
@@ -2340,12 +2599,14 @@ function _buildSerahanPinjamanHTML(pjId){
     <div class="ttd-box">
       <div class="ttd-lbl">Yang Menerima Pinjaman</div>
       <div class="ttd-place-txt">${s.namaSekolah?s.namaSekolah+', ':''} ${tglPanjang}</div>
+      <div class="ttd-gap"></div>
       <div class="ttd-line">${p.nama||'(................................)'}</div>
       <div class="ttd-jabatan">${p.jabatan||'Peminjam'}</div>
     </div>
     <div class="ttd-box">
       <div class="ttd-lbl">Yang Menyerahkan</div>
       <div class="ttd-place-txt">&nbsp;</div>
+      <div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div>
       <div class="ttd-line">${s.bendahara||'(................................)'}</div>
       <div class="ttd-jabatan">Bendahara Sekolah</div>
     </div>
@@ -2403,7 +2664,8 @@ function _buildBuktiCicilanHTML(pjId,bpId){
     .ttd-row-2{display:flex;justify-content:space-between;margin-top:36px;gap:20px;}
     .ttd-box{flex:1;text-align:center;}
     .ttd-lbl{font-size:8pt;color:#64748b;font-weight:600;margin-bottom:4px;}
-    .ttd-place-txt{font-size:8pt;color:#94a3b8;margin-bottom:52px;}
+    .ttd-place-txt{font-size:8pt;color:#94a3b8;margin-bottom:4px;}
+    .ttd-gap{height:52px;display:flex;align-items:center;justify-content:center;}
     .ttd-line{border-top:2px solid #1e293b;padding-top:5px;font-weight:800;font-size:9.5pt;color:#1e293b;}
     .ttd-jabatan{font-size:7.5pt;color:#64748b;margin-top:2px;}
   </style></head><body>
@@ -2453,12 +2715,14 @@ function _buildBuktiCicilanHTML(pjId,bpId){
     <div class="ttd-box">
       <div class="ttd-lbl">Yang Membayar</div>
       <div class="ttd-place-txt">${s.namaSekolah?s.namaSekolah+', ':''} ${tglPanjang}</div>
+      <div class="ttd-gap"></div>
       <div class="ttd-line">${p.nama||'(................................)'}</div>
       <div class="ttd-jabatan">${p.jabatan||'Peminjam'}</div>
     </div>
     <div class="ttd-box">
       <div class="ttd-lbl">Yang Menerima</div>
       <div class="ttd-place-txt">&nbsp;</div>
+      <div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div>
       <div class="ttd-line">${s.bendahara||'(................................)'}</div>
       <div class="ttd-jabatan">Bendahara Sekolah</div>
     </div>
@@ -2626,7 +2890,7 @@ function cetakKas(){
     <tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalMasuk)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalKeluar)}</td><td></td><td class="right">${fmtRpPrint(rb)}</td><td class="right">${fmtRpPrint(rt)}</td></tr>
   </table>
   <div class="ttd-row" style="justify-content:flex-end">
-    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
+    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
   </div>
   <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
   <script>window.onload=function(){window.print();}<\/script>
@@ -2835,13 +3099,316 @@ function cetakRekapBulan(){
     <tr class="total-row"><td style="color:#fff;font-weight:800">TOTAL ${tahun}</td><td class="right">${fmtRpPrint(totalSetor)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalTarik)}</td><td class="right">${fmtRpPrint(totalSetor-totalTarik)}</td><td class="center">${totalN}</td></tr>
   </table>
   <div class="ttd-row" style="justify-content:flex-end">
-    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
+    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
   </div>
   <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
   <script>window.onload=function(){window.print();}<\/script>
   </body></html>`;
   openPrintBlob(html);
   setTimeout(afterCetakRekapBulanWA,600);
+}
+
+// ===================== LAPORAN SETORAN BULAN (PER KELAS) =====================
+function _buildLaporanSetoranBulanHTML(){
+  const kId=tabSaldoKelasId;
+  if(!kId)return null;
+  const bulan=$('lsb-bulan')?.value||new Date().toISOString().slice(0,7);
+  const k=getKelas(kId);
+  const s=state.settings;
+  const bulanNames=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const [ty,tm]=bulan.split('-');
+  const labelBulan=`${bulanNames[+tm]||tm} ${ty}`;
+  const siswaKelas=[...state.siswa].filter(sv=>sv.kelasId===kId).sort((a,b)=>(a.absen||999)-(b.absen||999));
+  let jmlSudah=0,totalNominalBulan=0;
+  const rows=siswaKelas.map((sv,i)=>{
+    const trxBulan=getTrxBySiswa(sv.id).filter(t=>t.jenis!=='tarik'&&t.tanggal.startsWith(bulan));
+    const sudah=trxBulan.length>0;
+    if(sudah)jmlSudah++;
+    const totalSv=trxBulan.reduce((a,t)=>a+t.nominal,0);
+    totalNominalBulan+=totalSv;
+    const tglList=trxBulan.map(t=>fmtDatePrint(t.tanggal)).join(', ');
+    return`<tr>
+      <td class="center">${sv.absen||i+1}</td>
+      <td>${sv.nama}</td>
+      <td class="center">${sudah?'<span class="chip-setor">✓ Sudah</span>':'<span class="chip-tarik">✗ Belum</span>'}</td>
+      <td style="font-size:8pt;color:#475569">${sudah?tglList:'-'}</td>
+      <td class="right">${sudah?fmtRpPrint(totalSv):'-'}</td>
+    </tr>`;
+  }).join('');
+  const jmlSiswa=siswaKelas.length;
+  const jmlBelum=jmlSiswa-jmlSudah;
+  const pct=jmlSiswa?Math.round(jmlSudah/jmlSiswa*100):0;
+  return`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Laporan Setoran ${k.nama||''} - ${labelBulan}</title>
+  <style>${getPrintStyles()}</style></head><body>
+  <div class="kop">
+    <div class="kop-stripe"></div>
+    <div class="kop-text">
+      <div class="kop-label">Laporan Setoran Tabungan Siswa</div>
+      <div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div>
+      <div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div>
+    </div>
+  </div>
+  <div class="info-grid">
+    <div class="info-box"><div class="info-label">Kelas</div><div class="info-val">${k.nama||'-'}</div></div>
+    <div class="info-box"><div class="info-label">Wali Kelas</div><div class="info-val">${k.wali||'-'}</div></div>
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Periode</div><div class="info-val">${labelBulan}</div></div>
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Jumlah Siswa</div><div class="info-val">${jmlSiswa} siswa</div></div>
+  </div>
+  <div class="summary-bar">
+    <div class="summary-card sc-green"><div class="sc-label">Sudah Nabung</div><div class="sc-val">${jmlSudah} siswa</div></div>
+    <div class="summary-card sc-red"><div class="sc-label">Belum Nabung</div><div class="sc-val">${jmlBelum} siswa</div></div>
+    <div class="summary-card sc-purple"><div class="sc-label">Persentase</div><div class="sc-val">${pct}%</div></div>
+  </div>
+  <table>
+    <thead><tr><th class="center">No</th><th>Nama Siswa</th><th class="center">Status</th><th>Tanggal Setor</th><th class="right">Total Bulan Ini</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="5" class="center" style="color:#94a3b8;padding:20px">Belum ada siswa di kelas ini</td></tr>'}</tbody>
+    <tr class="total-row"><td colspan="4" style="color:#fff;font-weight:800">TOTAL SETORAN ${labelBulan.toUpperCase()}</td><td class="right">${fmtRpPrint(totalNominalBulan)}</td></tr>
+  </table>
+  <div class="ttd-row">
+    <div class="ttd-box"><div class="ttd-title">Wali Kelas</div><div class="ttd-gap"></div><div class="ttd-line">${k.wali||'(................................)'}</div></div>
+    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
+  </div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+}
+function cetakLaporanSetoranBulan(){
+  const html=_buildLaporanSetoranBulanHTML();
+  if(!html){toast('Pilih kelas dulu','error');return;}
+  openPrintBlob(html);
+}
+function exportPNGLaporanSetoranBulan(){
+  const html=_buildLaporanSetoranBulanHTML();
+  if(!html){toast('Pilih kelas dulu','error');return;}
+  const k=getKelas(tabSaldoKelasId);
+  const bulan=$('lsb-bulan')?.value||new Date().toISOString().slice(0,7);
+  const nama='laporan-setoran-'+(k?.nama||'kelas').replace(/\s+/g,'-').toLowerCase()+'-'+bulan;
+  exportHTMLasPNG(html,nama);
+}
+
+// ===================== TABUNGAN HARIAN (KALENDER SEBULAN) =====================
+function _buildTabunganHarianHTML(){
+  const kId=tabSaldoKelasId;
+  if(!kId)return null;
+  const bulan=$('lsb-bulan')?.value||new Date().toISOString().slice(0,7);
+  const k=getKelas(kId);
+  const s=state.settings;
+  const bulanNames=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const [ty,tm]=bulan.split('-');
+  const labelBulan=`${bulanNames[+tm]||tm} ${ty}`;
+  const jmlHari=new Date(+ty,+tm,0).getDate();
+  const kertas=$('th-kertas')?.value||'A4';
+  const pageSizeCSS=kertas==='F4'?'330mm 215mm':'A4 landscape';
+  const pageWidthMm=kertas==='F4'?330:297;
+  const siswaKelas=[...state.siswa].filter(sv=>sv.kelasId===kId).sort((a,b)=>(a.absen||999)-(b.absen||999));
+  const dayHeaders=Array.from({length:jmlHari},(_,i)=>`<th class="center th-day">${i+1}</th>`).join('');
+  let totalKeseluruhan=0;
+  let maxAngkaLen=1;
+  const rowsData=siswaKelas.map((sv,i)=>{
+    const trxBulan=getTrxBySiswa(sv.id).filter(t=>t.tanggal.startsWith(bulan));
+    const perHari={};
+    trxBulan.forEach(t=>{
+      const tgl=+t.tanggal.slice(8,10);
+      const nilai=t.jenis!=='tarik'?t.nominal:-t.nominal;
+      perHari[tgl]=(perHari[tgl]||0)+nilai;
+    });
+    let totalSiswa=0;
+    const cellVals=Array.from({length:jmlHari},(_,d)=>{
+      const v=perHari[d+1]||0;
+      totalSiswa+=v;
+      if(v){const len=(v<0?1:0)+Math.abs(v).toLocaleString('id-ID').length;if(len>maxAngkaLen)maxAngkaLen=len;}
+      return v;
+    });
+    totalKeseluruhan+=totalSiswa;
+    return {sv,i,cellVals,totalSiswa};
+  });
+  // Hitung lebar kolom & ukuran font tanggal secara dinamis supaya angka penuh (tidak disingkat) tetap muat
+  const marginMm=9*2;
+  const usableWidthMm=pageWidthMm-marginMm;
+  const noColMm=6, namaColMm=20, totalColMm=16;
+  const remainMm=Math.max(usableWidthMm-(noColMm+namaColMm+totalColMm),jmlHari*3);
+  const dayColMm=remainMm/jmlHari;
+  let dayFontPt=(dayColMm*2.83465)/(maxAngkaLen*0.62);
+  dayFontPt=Math.round(Math.min(Math.max(dayFontPt,4.5),7.5)*10)/10;
+  const rows=rowsData.map(({sv,i,cellVals,totalSiswa})=>{
+    const cells=cellVals.map(v=>{
+      if(!v)return `<td class="center td-day">-</td>`;
+      const angka=(v<0?'-':'')+Math.abs(v).toLocaleString('id-ID');
+      return `<td class="center td-day ${v<0?'td-neg':'td-pos'}">${angka}</td>`;
+    }).join('');
+    return `<tr><td class="center">${sv.absen||i+1}</td><td class="nama-cell">${sv.nama}</td>${cells}<td class="right total-cell">${fmtRpPrint(totalSiswa)}</td></tr>`;
+  }).join('');
+  const jmlSiswa=siswaKelas.length;
+  return`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tabungan Harian ${k.nama||''} - ${labelBulan}</title>
+  <style>${getPrintStyles()}
+    @page{size:${pageSizeCSS};margin:8mm 9mm;}
+    table.tbl-harian{font-size:6.8pt;table-layout:fixed;}
+    table.tbl-harian thead th{padding:5px 2px;font-size:6.8pt;}
+    .th-no{width:${noColMm}mm;}
+    .th-nama{width:${namaColMm}mm;text-align:left!important;}
+    .th-day{width:${dayColMm.toFixed(2)}mm;padding:4px 1px!important;}
+    .th-total{width:${totalColMm}mm;}
+    table.tbl-harian td{padding:3px 1px;font-size:6.8pt;}
+    .nama-cell{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+    .td-day{color:#94a3b8;font-size:${dayFontPt}pt;}
+    .td-pos{color:#16a34a;font-weight:800;}
+    .td-neg{color:#dc2626;font-weight:800;}
+    .total-cell{font-weight:800;color:#1e293b;background:#fdf2f8;font-size:7.5pt!important;}
+  </style></head><body>
+  <div class="kop">
+    <div class="kop-stripe"></div>
+    <div class="kop-text">
+      <div class="kop-label">Buku Tabungan Harian Siswa</div>
+      <div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div>
+      <div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div>
+    </div>
+  </div>
+  <div class="info-grid">
+    <div class="info-box"><div class="info-label">Kelas</div><div class="info-val">${k.nama||'-'}</div></div>
+    <div class="info-box"><div class="info-label">Wali Kelas</div><div class="info-val">${k.wali||'-'}</div></div>
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Periode</div><div class="info-val">${labelBulan}</div></div>
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Jumlah Siswa</div><div class="info-val">${jmlSiswa} siswa</div></div>
+  </div>
+  <table class="tbl-harian">
+    <thead><tr><th class="center th-no">No</th><th class="th-nama">Nama Siswa</th>${dayHeaders}<th class="right th-total">Total</th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="${jmlHari+3}" class="center" style="color:#94a3b8;padding:20px">Belum ada siswa di kelas ini</td></tr>`}</tbody>
+    <tr class="total-row"><td colspan="${jmlHari+2}" style="color:#fff;font-weight:800">TOTAL TABUNGAN ${labelBulan.toUpperCase()}</td><td class="right">${fmtRpPrint(totalKeseluruhan)}</td></tr>
+  </table>
+  <div style="font-size:7.5pt;color:#64748b;margin:-6px 0 10px">*Angka pada kolom tanggal adalah nominal penuh (Rp). Angka merah berarti penarikan.</div>
+  <div class="ttd-row">
+    <div class="ttd-box"><div class="ttd-title">Wali Kelas</div><div class="ttd-gap"></div><div class="ttd-line">${k.wali||'(................................)'}</div></div>
+    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
+  </div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+}
+function cetakTabunganHarian(){
+  const html=_buildTabunganHarianHTML();
+  if(!html){toast('Pilih kelas dulu','error');return;}
+  openPrintBlob(html);
+}
+function exportPNGTabunganHarian(){
+  const html=_buildTabunganHarianHTML();
+  if(!html){toast('Pilih kelas dulu','error');return;}
+  const k=getKelas(tabSaldoKelasId);
+  const bulan=$('lsb-bulan')?.value||new Date().toISOString().slice(0,7);
+  const nama='tabungan-harian-'+(k?.nama||'kelas').replace(/\s+/g,'-').toLowerCase()+'-'+bulan;
+  exportHTMLasPNG(html,nama);
+}
+function exportExcelTabunganHarian(){
+  const kId=tabSaldoKelasId;
+  if(!kId){toast('Pilih kelas dulu','error');return;}
+  if(typeof XLSX==='undefined'){toast('Modul Excel belum siap, coba lagi sebentar','error');return;}
+  const bulan=$('lsb-bulan')?.value||new Date().toISOString().slice(0,7);
+  const k=getKelas(kId);
+  const s=state.settings;
+  const bulanNames=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const [ty,tm]=bulan.split('-');
+  const labelBulan=`${bulanNames[+tm]||tm} ${ty}`;
+  const jmlHari=new Date(+ty,+tm,0).getDate();
+  const siswaKelas=[...state.siswa].filter(sv=>sv.kelasId===kId).sort((a,b)=>(a.absen||999)-(b.absen||999));
+  const dayTotals=Array(jmlHari).fill(0);
+  let totalKeseluruhan=0;
+  const dataRows=siswaKelas.map((sv,i)=>{
+    const trxBulan=getTrxBySiswa(sv.id).filter(t=>t.tanggal.startsWith(bulan));
+    const perHari={};
+    trxBulan.forEach(t=>{
+      const tgl=+t.tanggal.slice(8,10);
+      const nilai=t.jenis!=='tarik'?t.nominal:-t.nominal;
+      perHari[tgl]=(perHari[tgl]||0)+nilai;
+    });
+    let totalSiswa=0;
+    const cellVals=Array.from({length:jmlHari},(_,d)=>{
+      const v=perHari[d+1]||0;
+      totalSiswa+=v;dayTotals[d]+=v;
+      return v;
+    });
+    totalKeseluruhan+=totalSiswa;
+    return [sv.absen||i+1,k?.nama||'-',sv.nama,...cellVals,totalSiswa];
+  });
+  if(!dataRows.length){toast('Belum ada siswa di kelas ini','error');return;}
+
+  const totalCols=3+jmlHari+1; // NO,KLS,NAMA + tanggal + JUMLAH
+  const headerRowIdx=3; // baris ke-4 (index 3) = header NO/KLS/NAMA/tanggal/JUMLAH
+  const dataStartIdx=headerRowIdx+1;
+  const totalRowIdx=dataStartIdx+dataRows.length;
+
+  const aoa=[];
+  aoa.push([s.namaSekolah||'Nama Sekolah']);
+  aoa.push([`SETORAN TABUNGAN HARIAN BULAN ${labelBulan.toUpperCase()} - KELAS ${k?.nama||'-'}`]);
+  aoa.push([]);
+  aoa.push(['NO','KLS','NAMA',...Array.from({length:jmlHari},(_,i)=>i+1),'JUMLAH']);
+  dataRows.forEach(r=>aoa.push(r));
+  aoa.push(['','','JUMLAH',...dayTotals,totalKeseluruhan]);
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:totalCols-1}},
+    {s:{r:1,c:0},e:{r:1,c:totalCols-1}}
+  ];
+  ws['!cols']=[{wch:5},{wch:8},{wch:22},...Array.from({length:jmlHari},()=>({wch:6})),{wch:12}];
+  ws['!rows']=[{hpt:20},{hpt:18},{hpt:6},{hpt:22}];
+
+  // ===== STYLING TABEL (butuh library xlsx-js-style, sudah diganti di loader di atas) =====
+  const thin={style:'thin',color:{rgb:'94A3B8'}};
+  const borderAll={top:thin,bottom:thin,left:thin,right:thin};
+  const numFmt='#,##0;-#,##0;"-"';
+  const setCellStyle=(r,c,style)=>{
+    const ref=XLSX.utils.encode_cell({r,c});
+    if(!ws[ref])ws[ref]={t:'s',v:''};
+    ws[ref].s=style;
+  };
+  // Judul sekolah & baris judul laporan
+  setCellStyle(0,0,{font:{bold:true,sz:13,color:{rgb:'DB2777'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(1,0,{font:{bold:true,sz:11,color:{rgb:'1E293B'}},alignment:{horizontal:'center',vertical:'center'}});
+  // Header tabel (NO/KLS/NAMA/tanggal/JUMLAH)
+  for(let c=0;c<totalCols;c++){
+    setCellStyle(headerRowIdx,c,{
+      font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+      fill:{fgColor:{rgb:'DB2777'}},
+      alignment:{horizontal:'center',vertical:'center',wrapText:true},
+      border:borderAll
+    });
+  }
+  // Baris data siswa
+  for(let i=0;i<dataRows.length;i++){
+    const r=dataStartIdx+i;
+    const zebra=i%2===0?'FFFFFF':'FDF2F8';
+    for(let c=0;c<totalCols;c++){
+      const isNama=c===2,isTotal=c===totalCols-1;
+      setCellStyle(r,c,{
+        font:{sz:9,bold:isTotal,color:{rgb:isTotal?'DB2777':'1E293B'}},
+        fill:{fgColor:{rgb:isTotal?'FCE7F3':zebra}},
+        alignment:{horizontal:isNama?'left':'center',vertical:'center'},
+        border:borderAll,
+        numFmt:(c>2)?numFmt:undefined
+      });
+    }
+  }
+  // Baris total keseluruhan (JUMLAH per tanggal + total akhir)
+  for(let c=0;c<totalCols;c++){
+    setCellStyle(totalRowIdx,c,{
+      font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+      fill:{fgColor:{rgb:'1E293B'}},
+      alignment:{horizontal:c===2?'left':'center',vertical:'center'},
+      border:borderAll,
+      numFmt:(c>2)?numFmt:undefined
+    });
+  }
+
+  // ===== PAGE SETUP: F4 (215 x 330 mm) landscape, siap cetak =====
+  // Excel tidak punya kode baku "F4"; ukuran resminya sama dengan kertas Folio (8.5 x 13 in)
+  ws['!pageSetup']={paperSize:14,orientation:'landscape',fitToWidth:1,fitToHeight:0,horizontalDpi:300,verticalDpi:300};
+  ws['!margins']={left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2};
+  ws['!printOptions']={gridLines:false};
+
+  const wb=XLSX.utils.book_new();
+  const sheetName=(k?.nama||'Kelas').toString().replace(/[\\\/\?\*\[\]:]/g,'-').substring(0,28);
+  XLSX.utils.book_append_sheet(wb,ws,sheetName);
+  const fname='Tabungan-Harian-'+(k?.nama||'kelas').replace(/\s+/g,'-')+'-'+bulan+'.xlsx';
+  XLSX.writeFile(wb,fname);
+  toast('Excel berhasil diunduh!','success');
 }
 
 // ===================== REKENING KORAN =====================
@@ -3022,13 +3589,86 @@ function checkBackupReminder(){
   }).then(r=>{if(r.isConfirmed)backupData();});
 }
 
+// ===================== LOKASI BACKUP (File System Access API) =====================
+let backupDirHandle=null;
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open('tabbend-fs',1);
+    req.onupgradeneeded=()=>{req.result.createObjectStore('handles');};
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbSet(key,val){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('handles','readwrite');
+    tx.objectStore('handles').put(val,key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function idbGet(key){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('handles','readonly');
+    const req=tx.objectStore('handles').get(key);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function renderBackupFolderUI(){
+  const row=document.getElementById('backup-folder-row'),btn=document.getElementById('btn-pilih-folder'),info=document.getElementById('backup-folder-info');
+  if(!window.showDirectoryPicker){if(row)row.style.display='none';if(btn)btn.style.display='none';return;}
+  if(row)row.style.display='flex';if(btn)btn.style.display='';
+  if(info)info.textContent=backupDirHandle?('Folder: '+backupDirHandle.name):'Folder belum dipilih';
+}
+async function pilihLokasiBackup(){
+  if(!window.showDirectoryPicker){toast('Browser ini tidak mendukung pilih folder, backup akan diunduh biasa.','error');return;}
+  try{
+    const handle=await window.showDirectoryPicker({mode:'readwrite'});
+    backupDirHandle=handle;
+    await idbSet('backupDir',handle);
+    renderBackupFolderUI();
+    toast('Lokasi backup diset ke folder "'+handle.name+'"','success');
+  }catch(e){/* dibatalkan user */}
+}
+async function initBackupDirHandle(){
+  if(!window.showDirectoryPicker)return;
+  try{
+    const handle=await idbGet('backupDir');
+    if(!handle){renderBackupFolderUI();return;}
+    const perm=await handle.queryPermission({mode:'readwrite'});
+    if(perm==='granted')backupDirHandle=handle;
+    renderBackupFolderUI();
+  }catch(e){renderBackupFolderUI();}
+}
+function sanitizeFileName(str){return (str||'').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim()||'Bendahara';}
+
 // ===================== BACKUP/RESTORE/RESET =====================
-function backupData(){
+async function backupData(){
+  const meta=getBackupMeta();
+  meta.seq=(meta.seq||0)+1;
+  const namaFile=meta.seq+'_'+sanitizeFileName(state.settings.bendahara)+'.json';
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-tabungan-'+todayStr()+'.json';a.click();
-  const meta=getBackupMeta();meta.lastBackup=new Date().toISOString();saveBackupMeta(meta);
+  if(backupDirHandle){
+    try{
+      let perm=await backupDirHandle.queryPermission({mode:'readwrite'});
+      if(perm==='prompt')perm=await backupDirHandle.requestPermission({mode:'readwrite'});
+      if(perm==='granted'){
+        const fileHandle=await backupDirHandle.getFileHandle(namaFile,{create:true});
+        const writable=await fileHandle.createWritable();
+        await writable.write(blob);await writable.close();
+        meta.lastBackup=new Date().toISOString();saveBackupMeta(meta);renderBackupReminderUI();
+        toast('Backup tersimpan: '+namaFile,'success');
+        return;
+      }
+    }catch(e){/* jatuh ke unduhan biasa di bawah */}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=namaFile;a.click();
+  meta.lastBackup=new Date().toISOString();saveBackupMeta(meta);
   renderBackupReminderUI();
-  toast('Backup berhasil!','success');
+  toast('Backup berhasil! ('+namaFile+')','success');
 }
 function restoreData(input){
   const file=input.files[0];if(!file)return;
@@ -3190,7 +3830,7 @@ function exportPNGKas(){
   <div class="info-grid" style="margin-bottom:10px"><div class="info-box info-box-blue"><div class="info-label info-label-blue">Bendahara</div><div class="info-val">${s.bendahara||'-'}</div></div><div class="info-box info-box-blue"><div class="info-label info-label-blue">Bank / No. Rek</div><div class="info-val">${namaBank}${noRek?' / '+noRek:''}</div></div></div>
   <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Total Masuk</div><div class="sc-val">${fmtRpPrint(totalMasuk)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Keluar</div><div class="sc-val">${fmtRpPrint(totalKeluar)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Saldo Bersih</div><div class="sc-val">${fmtRpPrint(totalMasuk-totalKeluar)}</div></div></div>
   <table><thead><tr><th class="center">No</th><th>Tanggal</th><th>Jenis</th><th class="right">Masuk</th><th class="right">Keluar</th><th>Keterangan</th><th class="right">Saldo ${namaBank}</th><th class="right">Saldo Tunai</th></tr></thead><tbody>${rows||'<tr><td colspan="8" class="center" style="color:#94a3b8;padding:20px">Belum ada data kas</td></tr>'}</tbody><tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalMasuk)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalKeluar)}</td><td></td><td class="right">${fmtRpPrint(rb)}</td><td class="right">${fmtRpPrint(rt)}</td></tr></table>
-  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
+  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
   <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
   </body></html>`;
   exportHTMLasPNG(html,'laporan-kas');
@@ -3216,7 +3856,7 @@ function exportPNGDetailSiswa(){
   <div class="info-grid"><div class="info-box"><div class="info-label">Nama Siswa</div><div class="info-val">${siswa.nama}</div></div><div class="info-box"><div class="info-label">NIS / No. Absen</div><div class="info-val">${siswa.nis||'-'} / ${siswa.absen||'-'}</div></div><div class="info-box info-box-blue"><div class="info-label info-label-blue">Kelas</div><div class="info-val">${kelas?.nama||'-'}</div></div><div class="info-box info-box-blue"><div class="info-label info-label-blue">Wali Kelas</div><div class="info-val">${kelas?.wali||'-'}</div></div></div>
   <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Total Setor</div><div class="sc-val">${fmtRpPrint(setor)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Tarik</div><div class="sc-val">${fmtRpPrint(tarik)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Saldo Akhir</div><div class="sc-val">${fmtRpPrint(saldo)}</div></div></div>
   <table><thead><tr><th class="center">No</th><th>Tanggal</th><th>Jenis</th><th class="right">Setor</th><th class="right">Tarik</th><th class="right">Saldo</th><th>Keterangan</th></tr></thead><tbody>${rows||'<tr><td colspan="7" class="center" style="color:#94a3b8;padding:20px">Belum ada transaksi</td></tr>'}</tbody><tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(setor)}</td><td class="right" style="color:#f87171">${fmtRpPrint(tarik)}</td><td class="right">${fmtRpPrint(saldo)}</td><td></td></tr></table>
-  <div class="ttd-row"><div class="ttd-box"><div class="ttd-title">Wali Kelas</div><div class="ttd-line">${kelas?.wali||'(................................)'}</div></div><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
+  <div class="ttd-row"><div class="ttd-box"><div class="ttd-title">Wali Kelas</div><div class="ttd-gap"></div><div class="ttd-line">${kelas?.wali||'(................................)'}</div></div><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
   <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
   </body></html>`;
   exportHTMLasPNG(html,'tabungan-'+siswa.nama.replace(/\s+/g,'-').toLowerCase());
@@ -3242,7 +3882,7 @@ function exportPNGRekapBulan(){
   <div class="info-grid" style="grid-template-columns:1fr;margin-bottom:10px"><div class="info-box"><div class="info-label">Periode</div><div class="info-val">Tahun ${tahun} · ${totalN} Total Transaksi</div></div></div>
   <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Total Setor</div><div class="sc-val">${fmtRpPrint(totalSetor)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Tarik</div><div class="sc-val">${fmtRpPrint(totalTarik)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Net Tabungan</div><div class="sc-val">${fmtRpPrint(totalSetor-totalTarik)}</div></div></div>
   <table><thead><tr><th>Bulan</th><th class="right">Total Setor</th><th class="right">Total Tarik</th><th class="right">Net</th><th class="center">Jml Transaksi</th></tr></thead><tbody>${rows}</tbody><tr class="total-row"><td style="color:#fff;font-weight:800">TOTAL ${tahun}</td><td class="right">${fmtRpPrint(totalSetor)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalTarik)}</td><td class="right">${fmtRpPrint(totalSetor-totalTarik)}</td><td class="center">${totalN}</td></tr></table>
-  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
+  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
   <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
   </body></html>`;
   exportHTMLasPNG(html,'rekap-bulan-'+tahun);
@@ -3456,9 +4096,11 @@ function buildSerahTerimaHTML(d){
     .ba-ttd-item{text-align:center;padding:6px;}
     .ba-ttd-role{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;margin-bottom:4px;text-align:center;}
     .ba-ttd-place{font-size:7.5pt;color:#94a3b8;margin-bottom:3px;text-align:center;}
-    .ba-ttd-space{height:55px;}
+    .ba-ttd-space{height:55px;display:flex;align-items:center;justify-content:center;}
     .ba-ttd-name{border-top:2px solid #1e293b;padding-top:4px;font-weight:900;font-size:9pt;color:#1e293b;text-align:center;}
     .ba-ttd-jabatan{font-size:7.5pt;color:#64748b;margin-top:2px;text-align:center;}
+    .ba-ttd-qr{width:44px;height:44px;}
+    .ba-ttd-qr svg{width:100%;height:100%;display:block;}
     .ba-saksi{margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0;}
     .ba-saksi-title{font-size:7.5pt;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.07em;text-align:center;margin-bottom:8px;}
     .ba-stamp{border:2px dashed #fca5a5;border-radius:50%;width:62px;height:62px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:6.5pt;color:#dc2626;font-weight:700;text-align:center;line-height:1.3;}
@@ -3475,7 +4117,7 @@ function buildSerahTerimaHTML(d){
 
   <div class="ba-title">
     <div class="judul">Berita Acara Serah Terima Uang</div>
-    <div class="subjudul">Antara Bendahara 1 dan Bendahara 2</div>
+    <div class="subjudul">Antara Asisten Bendahara dan Bendahara Pusat</div>
   </div>
   <div class="ba-nomor">Nomor: ${d.nomor||'-'}</div>
 
@@ -3485,8 +4127,8 @@ function buildSerahTerimaHTML(d){
 
   <div class="ba-pihak">
     <div style="font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#9d174d;margin-bottom:8px">Pihak yang Terlibat</div>
-    <div class="ba-pihak-row"><div class="ba-pihak-label">Pihak Pertama<br><span style="font-size:7pt;font-weight:500;color:#64748b">(Penyetor / Bendahara 1)</span></div><div class="ba-pihak-val">: ${d.b1||'-'}</div></div>
-    <div class="ba-pihak-row"><div class="ba-pihak-label">Pihak Kedua<br><span style="font-size:7pt;font-weight:500;color:#64748b">(Penerima / Bendahara 2)</span></div><div class="ba-pihak-val">: ${d.b2||'-'}</div></div>
+    <div class="ba-pihak-row"><div class="ba-pihak-label">Pihak Pertama<br><span style="font-size:7pt;font-weight:500;color:#64748b">(Penyetor / Asisten Bendahara)</span></div><div class="ba-pihak-val">: ${d.b1||'-'}</div></div>
+    <div class="ba-pihak-row"><div class="ba-pihak-label">Pihak Kedua<br><span style="font-size:7pt;font-weight:500;color:#64748b">(Penerima / Bendahara Pusat)</span></div><div class="ba-pihak-val">: ${d.b2||'-'}</div></div>
   </div>
 
   <div class="ba-nominal-box">
@@ -3512,16 +4154,16 @@ function buildSerahTerimaHTML(d){
       <div class="ba-ttd-item">
         <div class="ba-ttd-role">Pihak Pertama — Penyetor</div>
         <div class="ba-ttd-place">${d.tempat||'-'}, ${tglPanjang}</div>
-        <div class="ba-ttd-space"></div>
+        <div class="ba-ttd-space">${s.ttdMode!=='manual'?`<div class="ba-ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(d.b1||'-')+'|'+new Date().toISOString())}</div>`:''}</div>
         <div class="ba-ttd-name">${d.b1||'(................................)'}</div>
-        <div class="ba-ttd-jabatan">Bendahara 1</div>
+        <div class="ba-ttd-jabatan">Asisten Bendahara</div>
       </div>
       <div class="ba-ttd-item">
         <div class="ba-ttd-role">Pihak Kedua — Penerima</div>
         <div class="ba-ttd-place">${d.tempat||'-'}, ${tglPanjang}</div>
         <div class="ba-ttd-space"></div>
         <div class="ba-ttd-name">${d.b2||'(................................)'}</div>
-        <div class="ba-ttd-jabatan">Bendahara 2</div>
+        <div class="ba-ttd-jabatan">Bendahara Pusat</div>
       </div>
     </div>
     <div class="ba-saksi">
@@ -4076,9 +4718,11 @@ function buildPengambilanHTML(d){
     .ttd-item{text-align:center;padding:4px;}
     .ttd-role{font-size:7pt;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:2px;}
     .ttd-place{font-size:7pt;color:#94a3b8;margin-bottom:3px;}
-    .ttd-space{height:52px;}
+    .ttd-space{height:52px;display:flex;align-items:center;justify-content:center;}
     .ttd-name{border-top:2px solid #1e293b;padding-top:4px;font-weight:900;font-size:8.5pt;color:#1e293b;}
     .ttd-jabatan{font-size:7pt;color:#64748b;margin-top:2px;}
+    .ttd-qr{width:40px;height:40px;}
+    .ttd-qr svg{width:100%;height:100%;display:block;}
     .doc-footer{margin-top:14px;padding-top:6px;border-top:1px solid #e2e8f0;font-size:7pt;color:#94a3b8;display:flex;justify-content:space-between;}
   </style></head><body>
   <div class="kop">
@@ -4156,7 +4800,7 @@ function buildPengambilanHTML(d){
       <div class="ttd-item">
         <div class="ttd-role">Bendahara</div>
         <div class="ttd-place">${d.tempat||'-'}, ${tglPanjang}</div>
-        <div class="ttd-space"></div>
+        <div class="ttd-space">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(d.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div>
         <div class="ttd-name">${d.bendahara||'(................................)'}</div>
         <div class="ttd-jabatan">Bendahara Sekolah</div>
       </div>
