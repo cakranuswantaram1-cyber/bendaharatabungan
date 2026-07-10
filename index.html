@@ -181,6 +181,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);overflow-x:h
 
 /* FORMS */
 .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.nominal-preview{display:none;font-size:12px;font-weight:700;font-family:monospace;color:var(--pink);margin-top:-2px;}
 .form-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);}
 .form-input{background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius-sm);padding:12px 14px;font-size:14px;color:var(--text);font-family:var(--font);outline:none;transition:border-color .2s;width:100%;}
 .form-input:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(219,39,119,.12);}
@@ -562,12 +563,14 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
           <div class="form-group"><label class="form-label">Nama Kepala Sekolah</label><input type="text" id="set-kepala-sekolah" class="form-input" placeholder="Nama kepala sekolah..."></div>
           <div class="form-group"><label class="form-label">No. WA Kepala Sekolah</label><input type="tel" id="set-nowa-kepala" class="form-input" placeholder="cth: 08123456789" inputmode="tel"></div>
           <div class="form-group"><label class="form-label">Nama Asisten Bendahara (Penerima Setoran Wali Kelas)</label><input type="text" id="set-bendahara" class="form-input" placeholder="Nama Asisten Bendahara..."></div>
-          <div class="form-group"><label class="form-label">Nama Bendahara Pusat (Penerima Setoran Asisten)</label><input type="text" id="set-bendahara2" class="form-input" placeholder="Nama Bendahara Pusat..."></div>
+          <div class="form-group"><label class="form-label">Nama Bendahara Utama (Penerima Setoran Asisten)</label><input type="text" id="set-bendahara2" class="form-input" placeholder="Nama Bendahara Utama..."></div>
           <div class="form-group"><label class="form-label">Metode Tanda Tangan Bendahara (pada dokumen cetak)</label><select id="set-ttd-mode" class="form-input"><option value="qr">QR Code</option><option value="manual">Tanda Tangan Manual (Pulpen)</option></select></div>
           <div class="form-group"><label class="form-label">Tahun Ajaran</label><input type="text" id="set-ta" class="form-input" placeholder="cth: 2024/2025"></div>
           <div class="form-group"><label class="form-label">Semester</label><select id="set-semester" class="form-input"><option value="">Pilih Semester...</option><option value="Ganjil">Ganjil</option><option value="Genap">Genap</option></select></div>
-          <div class="form-group"><label class="form-label">Nama Bank</label><input type="text" id="set-nama-bank" class="form-input" placeholder="cth: BRI, BNI..."></div>
-          <div class="form-group"><label class="form-label">No. Rekening</label><input type="text" id="set-no-rek" class="form-input" placeholder="Nomor rekening (opsional)"></div>
+          <div class="form-group"><label class="form-label">Nama Bank (Rekening Asisten Bendahara)</label><input type="text" id="set-nama-bank" class="form-input" placeholder="cth: BRI, BNI..."></div>
+          <div class="form-group"><label class="form-label">No. Rekening Asisten Bendahara</label><input type="text" id="set-no-rek" class="form-input" placeholder="Nomor rekening (opsional)"></div>
+          <div class="form-group"><label class="form-label">Nama Bank (Rekening Bendahara Utama)</label><input type="text" id="set-nama-bank2" class="form-input" placeholder="cth: BRI, BNI..."></div>
+          <div class="form-group"><label class="form-label">No. Rekening Bendahara Utama</label><input type="text" id="set-no-rek2" class="form-input" placeholder="Nomor rekening (opsional)"></div>
           <button class="btn btn-primary btn-full" onclick="saveSettings()"><i class="fas fa-save"></i> Simpan Pengaturan</button>
         </div>
       </div>
@@ -620,7 +623,11 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
     <div class="view" id="view-serahterima">
       <div class="info-box pink" style="margin-bottom:14px">
         <i class="fas fa-exchange-alt"></i>
-        <span>Berita acara serah terima uang antara <b>Asisten Bendahara</b> (penyetor) dan <b>Bendahara Pusat</b> (penerima). Dapat dicetak sebagai PDF atau disimpan sebagai PNG.</span>
+        <span>Berita acara serah terima uang tabungan siswa antara <b>Asisten Bendahara</b> (penyetor) dan <b>Bendahara Utama</b> (penerima). Dapat dicetak sebagai PDF atau disimpan sebagai PNG.</span>
+      </div>
+      <div id="st-saldo-box" class="info-box green" style="margin-bottom:14px">
+        <i class="fas fa-wallet"></i>
+        <span>Saldo yang dipegang Asisten Bendahara saat ini: <b id="st-saldo-angka" style="font-family:monospace">Rp 0</b></span>
       </div>
       <div class="card" style="margin-bottom:12px">
         <div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--pink-dim);color:var(--pink)"><i class="fas fa-file-signature" style="font-size:11px"></i></div> Buat Berita Acara Baru</div></div>
@@ -630,8 +637,8 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
             <div class="form-group"><label class="form-label">Nomor Surat</label><input type="text" id="st-nomor" class="form-input" placeholder="cth: 001/ST/VI/2025"></div>
           </div>
           <div class="form-group"><label class="form-label">Asisten Bendahara — Penyetor (dari pengaturan)</label><input type="text" id="st-b1" class="form-input" placeholder="Nama Asisten Bendahara..." readonly style="opacity:.7"></div>
-          <div class="form-group"><label class="form-label">Bendahara Pusat — Penerima (dari pengaturan)</label><input type="text" id="st-b2" class="form-input" placeholder="Nama Bendahara Pusat..." readonly style="opacity:.7"></div>
-          <div class="form-group"><label class="form-label">Jumlah Uang Diserahkan (Rp)</label><input type="number" id="st-nominal" class="form-input" placeholder="0" inputmode="numeric" min="0"></div>
+          <div class="form-group"><label class="form-label">Bendahara Utama — Penerima (dari pengaturan)</label><input type="text" id="st-b2" class="form-input" placeholder="Nama Bendahara Utama..." readonly style="opacity:.7"></div>
+          <div class="form-group"><label class="form-label">Jumlah Uang Diserahkan (Rp)</label><input type="number" id="st-nominal" class="form-input" placeholder="0" inputmode="numeric" min="0" oninput="nomPreview(this);checkSTNominal()"></div>
           <div class="form-group"><label class="form-label">Terbilang (opsional — otomatis jika kosong)</label><input type="text" id="st-terbilang" class="form-input" placeholder="Contoh: Dua Juta Lima Ratus Ribu Rupiah"></div>
           <div class="form-group"><label class="form-label">Keterangan / Perihal</label><input type="text" id="st-ket" class="form-input" placeholder="cth: Tabungan siswa Semester Ganjil 2024/2025"></div>
           <div class="form-group"><label class="form-label">Sumber Dana</label>
@@ -642,10 +649,11 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
             </div>
           </div>
           <input type="hidden" id="st-sumber" value="tunai">
+          <div id="st-rekening-info" style="display:none;margin-bottom:12px"><div class="info-box blue"><i class="fas fa-university"></i><span>Transfer akan masuk ke rekening <b>Bendahara Utama</b>: <b id="st-rekening-angka">-</b></span></div></div>
           <div id="st-rincian-campuran" style="display:none">
             <div class="grid2">
-              <div class="form-group"><label class="form-label">Uang Tunai (Rp)</label><input type="number" id="st-tunai-rinci" class="form-input" placeholder="0" inputmode="numeric" min="0"></div>
-              <div class="form-group"><label class="form-label">Transfer Bank (Rp)</label><input type="number" id="st-bank-rinci" class="form-input" placeholder="0" inputmode="numeric" min="0"></div>
+              <div class="form-group"><label class="form-label">Uang Tunai (Rp)</label><input type="number" id="st-tunai-rinci" class="form-input" placeholder="0" inputmode="numeric" min="0" oninput="nomPreview(this)"></div>
+              <div class="form-group"><label class="form-label">Transfer Bank (Rp)</label><input type="number" id="st-bank-rinci" class="form-input" placeholder="0" inputmode="numeric" min="0" oninput="nomPreview(this)"></div>
             </div>
           </div>
           <div class="form-group"><label class="form-label">Tempat Penandatanganan</label><input type="text" id="st-tempat" class="form-input" placeholder="cth: Purwawinangun"></div>
@@ -719,7 +727,7 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
             </div>
             <div class="form-group"><label class="form-label">Nama Wali Kelas</label><input type="text" id="pt-wali-kelas" class="form-input" placeholder="Otomatis dari kelas..." readonly style="opacity:.7"></div>
             <div class="grid2">
-              <div class="form-group"><label class="form-label">Jumlah Diambil (Rp)</label><input type="number" id="pt-nominal" class="form-input" placeholder="0" inputmode="numeric" min="0" oninput="updatePTSaldoSisa()"></div>
+              <div class="form-group"><label class="form-label">Jumlah Diambil (Rp)</label><input type="number" id="pt-nominal" class="form-input" placeholder="0" inputmode="numeric" min="0" oninput="updatePTSaldoSisa();nomPreview(this)"></div>
               <div class="form-group"><label class="form-label">Tanggal Pengambilan</label><input type="date" id="pt-tanggal" class="form-input"></div>
             </div>
             <div id="pt-saldo-sisa-box" style="display:none;margin-bottom:12px">
@@ -809,7 +817,7 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
       <div class="form-group"><label class="form-label">Penabung</label><select id="trx-siswa" class="form-input" onchange="updateSaldoInfo()"><option value="">Pilih...</option></select></div>
       <div id="trx-saldo-info" style="display:none;margin-bottom:12px"><div class="info-box green"><i class="fas fa-wallet"></i><span>Saldo saat ini: <b id="trx-saldo-angka" style="font-family:monospace">Rp 0</b></span></div></div>
       <div class="grid2">
-        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="trx-nominal" class="form-input" placeholder="0" min="0" oninput="updateSaldoPreview()" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="trx-nominal" class="form-input" placeholder="0" min="0" oninput="updateSaldoPreview();nomPreview(this)" inputmode="numeric"></div>
         <div class="form-group"><label class="form-label">Tanggal</label><input type="date" id="trx-tanggal" class="form-input"></div>
       </div>
       <div id="trx-saldo-preview" style="display:none;margin-bottom:12px"><div class="info-box pink"><i class="fas fa-arrow-right"></i><span>Saldo setelah: <b id="trx-preview-val" style="font-family:monospace">Rp 0</b></span></div></div>
@@ -928,7 +936,7 @@ Citra Dewi"></textarea>
       <div id="sk-mode-desc" style="margin-bottom:12px"><div class="info-box blue" style="background:var(--blue-dim);border-color:var(--blue)"><i class="fas fa-university" style="color:var(--blue)"></i><span style="color:var(--blue)">Setoran masuk ke rekening bank</span></div></div>
       <div class="grid2">
         <div class="form-group"><label class="form-label">Tanggal</label><input type="date" id="sk-tanggal" class="form-input"></div>
-        <div class="form-group"><label class="form-label">Total (Rp)</label><input type="number" id="sk-nominal" class="form-input" placeholder="0" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label">Total (Rp)</label><input type="number" id="sk-nominal" class="form-input" placeholder="0" inputmode="numeric" oninput="nomPreview(this)"></div>
       </div>
       <div class="form-group"><label class="form-label">Keterangan</label><input type="text" id="sk-ket" class="form-input" placeholder="Tabungan bulan..."></div>
     </div>
@@ -960,7 +968,7 @@ Citra Dewi"></textarea>
         </div>
       </div>
       <div class="grid2">
-        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="pj-nominal" class="form-input" placeholder="0" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="pj-nominal" class="form-input" placeholder="0" inputmode="numeric" oninput="nomPreview(this)"></div>
         <div class="form-group"><label class="form-label">Tanggal Pinjam</label><input type="date" id="pj-tanggal" class="form-input"></div>
       </div>
       <div class="form-group"><label class="form-label">Jatuh Tempo (opsional)</label><input type="date" id="pj-jatuh-tempo" class="form-input"></div>
@@ -985,7 +993,7 @@ Citra Dewi"></textarea>
       <input type="hidden" id="bp-pinjaman-id">
       <div class="info-box pink" style="margin-bottom:12px"><i class="fas fa-user"></i><div><div style="font-weight:700" id="bp-info-nama">-</div><div style="font-size:10px;margin-top:2px">Sisa pinjaman: <b id="bp-info-sisa" style="font-family:monospace">Rp 0</b></div></div></div>
       <div class="grid2">
-        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="bp-nominal" class="form-input" placeholder="0" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="bp-nominal" class="form-input" placeholder="0" inputmode="numeric" oninput="nomPreview(this)"></div>
         <div class="form-group"><label class="form-label">Tanggal Bayar</label><input type="date" id="bp-tanggal" class="form-input"></div>
       </div>
       <div class="form-group"><label class="form-label">Keterangan (opsional)</label><input type="text" id="bp-ket" class="form-input" placeholder="Cicilan ke-1, dll"></div>
@@ -1013,7 +1021,7 @@ Citra Dewi"></textarea>
         <span>Tunai: <b id="kas-cur-tunai" style="font-family:monospace">Rp 0</b></span>
       </div>
       <div class="grid2">
-        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="kas-nominal" class="form-input" placeholder="0" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="kas-nominal" class="form-input" placeholder="0" inputmode="numeric" oninput="nomPreview(this)"></div>
         <div class="form-group"><label class="form-label">Tanggal</label><input type="date" id="kas-tanggal" class="form-input"></div>
       </div>
       <div class="form-group"><label class="form-label">Keterangan (opsional)</label><input type="text" id="kas-ket" class="form-input" placeholder="Keterangan..."></div>
@@ -1041,7 +1049,7 @@ Citra Dewi"></textarea>
 </div>
 
 <script>
-let state={settings:{namaSekolah:'',npsn:'',alamat:'',kepalaSekolah:'',noWaKepala:'',bendahara:'',ta:'',semester:'',namaBank:'',noRek:''},kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru:[]};
+let state={settings:{namaSekolah:'',npsn:'',alamat:'',kepalaSekolah:'',noWaKepala:'',bendahara:'',ta:'',semester:'',namaBank:'',noRek:'',namaBank2:'',noRek2:''},kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru:[]};
 let _waPendingPayload=null;
 let currentView='dashboard',currentTrxJenis='setor',distribusiTarget=null,currentMgmtTab='kelas',currentLapTab='mutasi',currentRekapTab='kelas',currentDetailSiswaId=null,dsCurrentKelasId=null;
 let tabSaldoKelasId=null;
@@ -1078,6 +1086,8 @@ function loadData(){
   if(!state.pengambilanTabungan)state.pengambilanTabungan=[];
   if(!state.settings.namaBank)state.settings.namaBank='';
   if(!state.settings.noRek)state.settings.noRek='';
+  if(!state.settings.namaBank2)state.settings.namaBank2='';
+  if(!state.settings.noRek2)state.settings.noRek2='';
   if(!state.settings.semester)state.settings.semester='';
   if(!state.settings.bendahara2)state.settings.bendahara2='';
   if(!state.settings.ttdMode)state.settings.ttdMode='qr';
@@ -1089,10 +1099,10 @@ function saveData(){localStorage.setItem('tabbend_v2',JSON.stringify(state));}
 
 function loadSettings(){
   const s=state.settings;
-  ['set-nama-sekolah','set-npsn','set-alamat','set-kepala-sekolah','set-nowa-kepala','set-bendahara','set-bendahara2','set-ttd-mode','set-ta','set-semester','set-nama-bank','set-no-rek'].forEach(id=>{
+  ['set-nama-sekolah','set-npsn','set-alamat','set-kepala-sekolah','set-nowa-kepala','set-bendahara','set-bendahara2','set-ttd-mode','set-ta','set-semester','set-nama-bank','set-no-rek','set-nama-bank2','set-no-rek2'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
-    const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek'};
+    const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek','set-nama-bank2':'namaBank2','set-no-rek2':'noRek2'};
     el.value=s[keys[id]]||(id==='set-ttd-mode'?'qr':'');
   });
   const hSub=document.getElementById('h-sekolah');
@@ -1104,13 +1114,13 @@ function loadSettings(){
 }
 
 function saveSettings(){
-  const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek'};
+  const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek','set-nama-bank2':'namaBank2','set-no-rek2':'noRek2'};
   Object.entries(keys).forEach(([id,key])=>{const el=document.getElementById(id);if(el)state.settings[key]=el.value;});
   saveData();loadSettings();toast('Pengaturan disimpan!','success');
 }
 
 function seedDemoData(){
-  state.settings={namaSekolah:'MTs Nurul Iman',npsn:'20234567',alamat:'Jl. Pendidikan No.1',kepalaSekolah:'Bapak Kepala, S.Pd',bendahara:'Ibu Sari Dewi, S.Pd',ta:'2024/2025',semester:'Ganjil',namaBank:'BRI',noRek:'1234-01-012345'};
+  state.settings={namaSekolah:'MTs Nurul Iman',npsn:'20234567',alamat:'Jl. Pendidikan No.1',kepalaSekolah:'Bapak Kepala, S.Pd',bendahara:'Ibu Sari Dewi, S.Pd',ta:'2024/2025',semester:'Ganjil',namaBank:'BRI',noRek:'1234-01-012345',namaBank2:'BRI',noRek2:'1234-02-098765'};
   state.kelas=[{id:'k1',nama:'VII A',wali:'Pak Ahmad'},{id:'k2',nama:'VII B',wali:'Bu Siti'},{id:'k3',nama:'VIII A',wali:'Pak Budi'}];
   if(!state.guru)state.guru=[];
   state.guru=[{nama:'Ibu Rina, S.Pd',noWa:'083456789012'},{nama:'Pak Dodi, M.Pd',noWa:'084567890123'}];
@@ -1132,6 +1142,27 @@ const $ = id=>document.getElementById(id);
 const todayStr=()=>new Date().toISOString().split('T')[0];
 const fmtDate=d=>{if(!d)return'-';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
 const fmtRp=n=>'Rp '+Number(n||0).toLocaleString('id-ID');
+function nomPreview(el){
+  if(!el)return;
+  const fg=el.closest('.form-group')||el.parentElement;
+  if(!fg)return;
+  let prev=fg.querySelector('.nominal-preview');
+  if(!prev){prev=document.createElement('div');prev.className='nominal-preview';fg.appendChild(prev);}
+  const raw=(el.value||'').toString().trim();
+  const v=parseFloat(raw);
+  if(!raw||isNaN(v)||v===0){prev.textContent='';prev.style.display='none';}
+  else{prev.textContent='= '+fmtRp(v);prev.style.display='block';}
+}
+function checkSTNominal(){
+  const el=$('st-nominal');if(!el)return;
+  const v=parseFloat(el.value)||0;
+  const saldo=getSaldoAsistenBendahara();
+  const fg=el.closest('.form-group');
+  let warn=$('st-nominal-warn');
+  if(!warn){warn=document.createElement('div');warn.id='st-nominal-warn';warn.style.cssText='font-size:11px;font-weight:700;color:var(--red);margin-top:2px;';fg.appendChild(warn);}
+  if(v>saldo&&v>0){warn.textContent='⛔ Melebihi saldo Asisten Bendahara ('+fmtRp(saldo)+')';warn.style.display='block';}
+  else{warn.textContent='';warn.style.display='none';}
+}
 const genId=()=>'_'+Math.random().toString(36).substr(2,9);
 function toTitleCase(str){return str.replace(/\s+/g,' ').trim().split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');}
 const getKelas=id=>state.kelas.find(k=>k.id===id)||{};
@@ -1182,6 +1213,11 @@ function renderStatusSetoranBadgeHTML(kelasId){
 const getRunningBalance=(sId,upToId)=>{const trxs=getTrxBySiswa(sId);let s=0;for(const t of trxs){s+=t.jenis!=='tarik'?t.nominal:-t.nominal;if(t.id===upToId)break;}return s;};
 const getSaldoBank=()=>(state.kasTransaksi||[]).reduce((s,k)=>k.jenis==='setor_bank'?s+k.nominal:k.jenis==='tarik_bank'?s-k.nominal:s,0);
 const getSaldoTunai=()=>(state.kasTransaksi||[]).reduce((s,k)=>k.jenis==='masuk_tunai'?s+k.nominal:k.jenis==='keluar_tunai'?s-k.nominal:s,0);
+const getSaldoAsistenBendahara=()=>{
+  const masuk=(state.setoranKelas||[]).reduce((s,sk)=>s+sk.nominal,0);
+  const keluar=(state.serahTerima||[]).reduce((s,st)=>s+st.nominal,0);
+  return masuk-keluar;
+};
 const getPinjaman=id=>state.pinjaman.find(p=>p.id===id)||{};
 const getTotalBayar=id=>{const p=getPinjaman(id);return(p.pembayaran||[]).reduce((s,b)=>s+b.nominal,0);};
 const getSisaPinjaman=id=>{const p=getPinjaman(id);return(p.nominal||0)-getTotalBayar(id);};
@@ -1345,7 +1381,7 @@ function populateSelects(){
 
 // ===================== DASHBOARD =====================
 function renderDashboard(){
-  // ====== KAS BENDAHARA: uang kas yang dipegang bendahara (bank + tunai) ======
+  // ====== KAS BENDAHARA: saldo bank + tunai yang dipegang bendahara ======
   const totalSetoranKelas=(state.setoranKelas||[]).reduce((s,sk)=>s+sk.nominal,0);
   const jmlSetoranKelas=(state.setoranKelas||[]).length;
   const kelasYgSetor=new Set((state.setoranKelas||[]).map(sk=>sk.kelasId)).size;
@@ -1416,7 +1452,7 @@ function renderDashboard(){
           <div style="font-size:9px;color:var(--text3);margin-top:4px">${jmlSetoranKelas}× · ${kelasYgSetor} kelas</div>
         </div>
         <div onclick="switchView('serahterima')" style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:10px 8px;text-align:center;cursor:pointer">
-          <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--purple);margin-bottom:5px">Keluar: Ke Bendahara Pusat</div>
+          <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--purple);margin-bottom:5px">Keluar: Ke Bendahara Utama</div>
           <div style="font-size:12px;font-weight:900;font-family:monospace;color:var(--purple);line-height:1.2">${fmtRp(totalSerahTerima)}</div>
           <div style="font-size:9px;color:var(--text3);margin-top:4px">${jmlSerahTerima>0?jmlSerahTerima+'× serah terima':'Belum ada'}</div>
         </div>
@@ -2355,7 +2391,7 @@ function openDistribusiModal(skId){
   $('distribusi-content').innerHTML=`
     <div style="padding:4px 0 12px">
       <div class="info-box pink"><i class="fas fa-info-circle"></i><div>Total: <b style="font-family:monospace">${fmtRp(sk.nominal)}</b><br>Sudah: <b style="font-family:monospace">${fmtRp(sudah.reduce((s,d)=>s+d.nominal,0))}</b></div></div>
-      ${siswaKelas.map(s=>{const d=sudah.find(x=>x.siswaId===s.id)||{};return`<div class="form-group"><label class="form-label">${s.absen||'?'}. ${s.nama}</label><input type="number" id="dist-${s.id}" class="form-input" placeholder="0" value="${d.nominal||perSiswa}" inputmode="numeric"></div>`;}).join('')}
+      ${siswaKelas.map(s=>{const d=sudah.find(x=>x.siswaId===s.id)||{};return`<div class="form-group"><label class="form-label">${s.absen||'?'}. ${s.nama}</label><input type="number" id="dist-${s.id}" class="form-input" placeholder="0" value="${d.nominal||perSiswa}" inputmode="numeric" oninput="nomPreview(this)"></div>`;}).join('')}
     </div>`;
   $('sheet-distribusi').classList.add('open');
 }
@@ -3907,6 +3943,18 @@ function setSTPilihSumber(val){
     else el.className='toggle-btn on-red';
   }
   $('st-rincian-campuran').style.display=val==='campuran'?'block':'none';
+  const rekBox=$('st-rekening-info');
+  if(rekBox){
+    if(val==='bank'||val==='campuran'){
+      const s=state.settings;
+      const bankNama=s.namaBank2||s.namaBank||'(Belum diisi)';
+      const bankRek=s.noRek2||s.noRek||'-';
+      $('st-rekening-angka').textContent=bankNama+' / '+bankRek;
+      rekBox.style.display='block';
+    }else{
+      rekBox.style.display='none';
+    }
+  }
 }
 
 function renderSerahTerima(){
@@ -3914,6 +3962,10 @@ function renderSerahTerima(){
   const b1=$('st-b1');if(b1)b1.value=s.bendahara||'(Belum diisi di Pengaturan)';
   const b2=$('st-b2');if(b2)b2.value=s.bendahara2||'(Belum diisi di Pengaturan)';
   const tgl=$('st-tanggal');if(tgl&&!tgl.value)tgl.value=todayStr();
+  const saldoAsisten=getSaldoAsistenBendahara();
+  const saldoEl=$('st-saldo-angka');
+  if(saldoEl){saldoEl.textContent=fmtRp(saldoAsisten);saldoEl.style.color=saldoAsisten<0?'var(--red)':'var(--green)';}
+  checkSTNominal();
   setSTPilihSumber(stSumber);
   renderSerahTerimaHistory();
 }
@@ -3971,7 +4023,7 @@ function getFormSerahTerima(){
   const nomor=$('st-nomor').value.trim()||('-');
   const nominal=parseFloat($('st-nominal').value)||0;
   const terbilang=$('st-terbilang').value.trim()||terbilangRupiah(nominal);
-  const ket=$('st-ket').value.trim()||'Serah terima uang kas';
+  const ket=$('st-ket').value.trim()||'Serah terima uang tabungan';
   const sumber=$('st-sumber').value||'tunai';
   const tempat=$('st-tempat').value.trim()||s.namaSekolah||'-';
   let rincianTunai=0,rincianBank=0;
@@ -4003,11 +4055,15 @@ function _kurangKasDariSerahTerima(data){
 function simpanSerahTerima(){
   const data=getFormSerahTerima();
   if(!data.nominal||data.nominal<=0){toast('Nominal tidak boleh kosong!','error');return;}
+  const saldoAsisten=getSaldoAsistenBendahara();
+  if(data.nominal>saldoAsisten){toast('⛔ Tidak bisa! Saldo Asisten Bendahara hanya '+fmtRp(saldoAsisten)+', tidak boleh menyerahkan lebih dari itu.','error');return;}
+  if(data.sumber==='campuran'&&(data.rincianTunai+data.rincianBank)!==data.nominal){toast('⛔ Rincian Tunai + Transfer Bank ('+fmtRp(data.rincianTunai+data.rincianBank)+') harus sama dengan total nominal ('+fmtRp(data.nominal)+')!','error');return;}
   if(!state.serahTerima)state.serahTerima=[];
   state.serahTerima.push(data);
   _kurangKasDariSerahTerima(data);
   saveData();
   renderSerahTerimaHistory();
+  renderSerahTerima();
   toast('Berita acara disimpan & kas otomatis dikurangi!','success');
   cetakSerahTerimaHTML(data);
 }
@@ -4015,11 +4071,15 @@ function simpanSerahTerima(){
 function cetakSerahTerimaPNG(){
   const data=getFormSerahTerima();
   if(!data.nominal||data.nominal<=0){toast('Nominal tidak boleh kosong!','error');return;}
+  const saldoAsisten=getSaldoAsistenBendahara();
+  if(data.nominal>saldoAsisten){toast('⛔ Tidak bisa! Saldo Asisten Bendahara hanya '+fmtRp(saldoAsisten)+', tidak boleh menyerahkan lebih dari itu.','error');return;}
+  if(data.sumber==='campuran'&&(data.rincianTunai+data.rincianBank)!==data.nominal){toast('⛔ Rincian Tunai + Transfer Bank ('+fmtRp(data.rincianTunai+data.rincianBank)+') harus sama dengan total nominal ('+fmtRp(data.nominal)+')!','error');return;}
   if(!state.serahTerima)state.serahTerima=[];
   state.serahTerima.push(data);
   _kurangKasDariSerahTerima(data);
   saveData();
   renderSerahTerimaHistory();
+  renderSerahTerima();
   toast('Menyimpan PNG & kas otomatis dikurangi...','success');
   const html=buildSerahTerimaHTML(data);
   exportHTMLasPNG(html,'serah-terima-'+data.tanggal);
@@ -4052,12 +4112,29 @@ function deleteSerahTerima(id){
 function buildSerahTerimaHTML(d){
   const s=state.settings;
   const tglPanjang=new Date(d.tanggal+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const sumberLabel={tunai:'Uang Tunai',bank:'Transfer Bank',campuran:'Tunai & Transfer Bank'}[d.sumber]||d.sumber;
+  const namaBankSet=s.namaBank2||s.namaBank||'Bank';
+  const noRekSet=(s.noRek2||s.noRek)?(' • No. Rek '+(s.noRek2||s.noRek)):'';
+  let sumberLabel='';
   let rincianHTML='';
-  if(d.sumber==='campuran'){
-    rincianHTML=`<table style="margin-bottom:6px;font-size:9pt">
-      <tr><td style="padding:3px 0;color:#64748b;width:160px">Uang Tunai</td><td style="font-weight:700">: ${fmtRpPrint(d.rincianTunai||0)}</td></tr>
-      <tr><td style="padding:3px 0;color:#64748b">Transfer Bank</td><td style="font-weight:700">: ${fmtRpPrint(d.rincianBank||0)}</td></tr>
+  if(d.sumber==='tunai'){
+    sumberLabel='Uang Tunai';
+    rincianHTML=`<table style="margin-bottom:6px;font-size:9pt;width:100%">
+      <tr><td style="padding:3px 0;color:#64748b;width:160px">Metode Penyerahan</td><td style="font-weight:700">: Tunai</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Jumlah Tunai</td><td style="font-weight:700">: ${fmtRpPrint(d.nominal)}</td></tr>
+    </table>`;
+  }else if(d.sumber==='bank'){
+    sumberLabel='Transfer Bank ('+namaBankSet+')';
+    rincianHTML=`<table style="margin-bottom:6px;font-size:9pt;width:100%">
+      <tr><td style="padding:3px 0;color:#64748b;width:160px">Metode Penyerahan</td><td style="font-weight:700">: Transfer Bank</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Rekening Tujuan (Bendahara Utama)</td><td style="font-weight:700">: ${namaBankSet}${noRekSet}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Jumlah Transfer</td><td style="font-weight:700">: ${fmtRpPrint(d.nominal)}</td></tr>
+    </table>`;
+  }else{
+    sumberLabel='Tunai & Transfer Bank (Campuran)';
+    rincianHTML=`<table style="margin-bottom:6px;font-size:9pt;width:100%">
+      <tr><td style="padding:3px 0;color:#64748b;width:160px">Metode Penyerahan</td><td style="font-weight:700">: Campuran</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Uang Tunai</td><td style="font-weight:700">: ${fmtRpPrint(d.rincianTunai||0)}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Transfer Bank ke Rek. Bendahara Utama (${namaBankSet}${noRekSet})</td><td style="font-weight:700">: ${fmtRpPrint(d.rincianBank||0)}</td></tr>
     </table>`;
   }
   return`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Berita Acara Serah Terima</title>
@@ -4081,7 +4158,7 @@ function buildSerahTerimaHTML(d){
     .ba-pihak{background:#fdf2f8;border:1px solid #fbcfe8;border-radius:6px;padding:9px 13px;margin:10px 0;font-size:9pt;}
     .ba-pihak-row{display:flex;gap:6px;margin-bottom:5px;align-items:flex-start;}
     .ba-pihak-row:last-child{margin-bottom:0;}
-    .ba-pihak-label{min-width:155px;font-weight:800;color:#9d174d;font-size:8pt;text-transform:uppercase;letter-spacing:.04em;padding-top:1px;}
+    .ba-pihak-label{width:150px;flex-shrink:0;font-weight:800;color:#9d174d;font-size:8pt;text-transform:uppercase;letter-spacing:.04em;padding-top:1px;}
     .ba-pihak-val{font-weight:700;color:#1e293b;text-align:left;}
     .ba-nominal-box{background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:2px solid #f9a8d4;border-radius:8px;padding:10px 14px;margin:10px 0;text-align:center;}
     .ba-nominal-label{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#9d174d;margin-bottom:3px;text-align:center;}
@@ -4117,22 +4194,22 @@ function buildSerahTerimaHTML(d){
 
   <div class="ba-title">
     <div class="judul">Berita Acara Serah Terima Uang</div>
-    <div class="subjudul">Antara Asisten Bendahara dan Bendahara Pusat</div>
+    <div class="subjudul">Antara Asisten Bendahara dan Bendahara Utama</div>
   </div>
   <div class="ba-nomor">Nomor: ${d.nomor||'-'}</div>
 
   <div class="ba-body">
-    Pada hari ini, <b>${tglPanjang}</b>, bertempat di <b>${d.tempat||'-'}</b>, telah dilaksanakan serah terima uang kas sekolah dari Bendahara Pertama (Penyetor) kepada Bendahara Kedua (Penerima) dengan rincian sebagai berikut:
+    Pada hari ini, <b>${tglPanjang}</b>, bertempat di <b>${d.tempat||'-'}</b>, telah dilaksanakan serah terima uang tabungan siswa dari Asisten Bendahara (Penyetor) kepada Bendahara Utama (Penerima) dengan rincian sebagai berikut:
   </div>
 
   <div class="ba-pihak">
     <div style="font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#9d174d;margin-bottom:8px">Pihak yang Terlibat</div>
     <div class="ba-pihak-row"><div class="ba-pihak-label">Pihak Pertama<br><span style="font-size:7pt;font-weight:500;color:#64748b">(Penyetor / Asisten Bendahara)</span></div><div class="ba-pihak-val">: ${d.b1||'-'}</div></div>
-    <div class="ba-pihak-row"><div class="ba-pihak-label">Pihak Kedua<br><span style="font-size:7pt;font-weight:500;color:#64748b">(Penerima / Bendahara Pusat)</span></div><div class="ba-pihak-val">: ${d.b2||'-'}</div></div>
+    <div class="ba-pihak-row"><div class="ba-pihak-label">Pihak Kedua<br><span style="font-size:7pt;font-weight:500;color:#64748b">(Penerima / Bendahara Utama)</span></div><div class="ba-pihak-val">: ${d.b2||'-'}</div></div>
   </div>
 
   <div class="ba-nominal-box">
-    <div class="ba-nominal-label">Jumlah Uang yang Diserahterimakan</div>
+    <div class="ba-nominal-label">Jumlah Uang Tabungan yang Diserahterimakan</div>
     <div class="ba-nominal-val">${fmtRpPrint(d.nominal)}</div>
     <div class="ba-terbilang">"${d.terbilang||terbilangRupiah(d.nominal)}"</div>
     <div><span class="ba-sumber-chip">📌 ${sumberLabel}</span></div>
@@ -4142,11 +4219,11 @@ function buildSerahTerimaHTML(d){
 
   <div class="ba-ket-box">
     <b>Perihal / Keterangan:</b><br>
-    ${d.ket||'Serah terima uang kas sekolah'}
+    ${d.ket||'Serah terima uang tabungan siswa'}
   </div>
 
   <div class="ba-pernyataan">
-    Dengan ditandatanganinya berita acara ini, maka Pihak Pertama menyatakan telah menyerahkan uang sebagaimana tersebut di atas kepada Pihak Kedua, dan Pihak Kedua menyatakan telah menerima uang tersebut dalam kondisi lengkap dan sesuai dengan jumlah yang tercantum. Berita acara ini dibuat dalam keadaan sadar, tanpa paksaan dari pihak manapun, dan dapat dipergunakan sebagaimana mestinya.
+    Dengan ditandatanganinya berita acara ini, maka Pihak Pertama menyatakan telah menyerahkan uang tabungan sebagaimana tersebut di atas kepada Pihak Kedua, dan Pihak Kedua menyatakan telah menerima uang tabungan tersebut dalam kondisi lengkap dan sesuai dengan jumlah yang tercantum. Berita acara ini dibuat dalam keadaan sadar, tanpa paksaan dari pihak manapun, dan dapat dipergunakan sebagaimana mestinya.
   </div>
 
   <div class="ba-ttd-section">
@@ -4163,7 +4240,7 @@ function buildSerahTerimaHTML(d){
         <div class="ba-ttd-place">${d.tempat||'-'}, ${tglPanjang}</div>
         <div class="ba-ttd-space"></div>
         <div class="ba-ttd-name">${d.b2||'(................................)'}</div>
-        <div class="ba-ttd-jabatan">Bendahara Pusat</div>
+        <div class="ba-ttd-jabatan">Bendahara Utama</div>
       </div>
     </div>
     <div class="ba-saksi">
