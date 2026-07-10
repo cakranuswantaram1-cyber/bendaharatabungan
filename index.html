@@ -87,6 +87,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);overflow-x:h
 .header-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;}
 .icon-btn{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:13px;transition:all .2s;}
 .icon-btn:hover,.icon-btn:active{background:var(--surface3);color:var(--text);}
+.icon-btn.disabled{opacity:.35;pointer-events:none;}
 
 .content{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px;padding-bottom:24px;}
 
@@ -191,6 +192,7 @@ select.form-input option{background:var(--surface);}
 .toggle-row{display:flex;gap:8px;}
 .toggle-btn{flex:1;padding:11px 8px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text3);text-align:center;transition:all .2s;}
 .toggle-btn.on-green{border-color:var(--green);background:var(--green-dim);color:var(--green);}
+.toggle-btn.on-amber{border-color:var(--amber);background:var(--amber-dim);color:var(--amber);}
 .toggle-btn.on-red{border-color:var(--red);background:var(--red-dim);color:var(--red);}
 .toggle-btn.on-pink{border-color:var(--pink);background:var(--pink-dim);color:var(--pink);}
 .info-box{border-radius:var(--radius-sm);padding:10px 14px;font-size:11px;font-weight:600;display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;}
@@ -370,6 +372,12 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
     </div>
     <div class="header-actions">
       <div class="icon-btn" id="h-clock" style="font-size:10px;font-family:monospace;font-weight:700;color:var(--pink);width:auto;padding:0 10px;min-width:64px">00:00</div>
+      <div class="icon-btn disabled" id="btn-undo" onclick="undoAction()" title="Undo">
+        <i class="fas fa-rotate-left"></i>
+      </div>
+      <div class="icon-btn disabled" id="btn-redo" onclick="redoAction()" title="Redo">
+        <i class="fas fa-rotate-right"></i>
+      </div>
       <div class="icon-btn" onclick="openTrxSheet()" title="Transaksi Baru">
         <i class="fas fa-plus"></i>
       </div>
@@ -553,6 +561,11 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
             <input type="month" id="rk-filter-bulan" class="form-input" style="font-size:12px;padding:9px" onchange="renderRekKoran()">
           </div>
         </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button class="btn btn-warning btn-xs" onclick="cetakRekKoran()"><i class="fas fa-print"></i> Cetak PDF</button>
+          <button class="btn btn-ghost btn-xs" onclick="exportPNGRekKoran()"><i class="fas fa-image"></i> PNG</button>
+          <button class="btn btn-success btn-xs" onclick="exportExcelRekKoran()"><i class="fas fa-file-excel"></i> Excel</button>
+        </div>
         <div id="rek-koran-content"><div class="empty-state"><div class="empty-icon">📊</div><p>Pilih kelas untuk melihat rekening koran</p></div></div>
       </div>
     </div>
@@ -622,6 +635,16 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
           <input type="file" id="restore-file" accept=".json" onchange="restoreData(this)" style="display:none">
           <div style="height:1px;background:var(--border)"></div>
           <button class="btn btn-danger btn-full" onclick="resetAllData()"><i class="fas fa-trash"></i> Reset Semua Data</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--red-dim);color:var(--red)"><i class="fas fa-trash-can" style="font-size:11px"></i></div> Kelola & Hapus Data</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px">Hapus data per kategori secara permanen. Setiap aksi wajib konfirmasi ketik "HAPUS".</div>
+          <button class="btn btn-danger btn-full" onclick="hapusKategoriTransaksi()"><i class="fas fa-receipt"></i> Hapus Semua Transaksi Tabungan</button>
+          <button class="btn btn-danger btn-full" onclick="hapusKategoriSiswaKelas()"><i class="fas fa-user-graduate"></i> Hapus Semua Siswa & Kelas</button>
+          <button class="btn btn-danger btn-full" onclick="hapusSemuaKas()"><i class="fas fa-cash-register"></i> Hapus Semua Data Kas</button>
+          <button class="btn btn-danger btn-full" onclick="hapusKategoriPinjaman()"><i class="fas fa-sack-dollar"></i> Hapus Semua Data Pinjaman</button>
         </div>
       </div>
     </div>
@@ -752,6 +775,18 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
       </div>
     </div>
 
+    <!-- VIEW: DATA WALI KELAS & GURU -->
+    <div class="view" id="view-dataguru">
+      <div class="search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" id="dg-search" placeholder="Cari nama / mapel / jabatan..." oninput="renderDataGuru()">
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-primary btn-sm" onclick="openDataGuruSheet()"><i class="fas fa-plus"></i> Tambah Guru</button>
+      </div>
+      <div class="card" id="dataguru-list-card"></div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /app -->
 
@@ -782,6 +817,9 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
     </div>
     <div class="drawer-item" onclick="goPinjaman()" id="drawer-pinjaman">
       <i class="fas fa-hand-holding-usd"></i> Pinjaman Guru
+    </div>
+    <div class="drawer-item" onclick="switchView('dataguru')" id="drawer-dataguru">
+      <i class="fas fa-chalkboard-teacher"></i> Wali Kelas & Guru
     </div>
     <div class="drawer-item" onclick="switchView('kas')" id="drawer-kas">
       <i class="fas fa-landmark"></i> Kas Bendahara
@@ -935,7 +973,7 @@ Citra Dewi"></textarea>
       <div class="form-group">
         <label class="form-label">Jenis Setoran</label>
         <div class="toggle-row">
-          <div class="toggle-btn on-blue" id="skbtn-global" onclick="setSKMode('bank')">🏦 Transfer Bank</div>
+          <div class="toggle-btn on-amber" id="skbtn-global" onclick="setSKMode('bank')">🏦 Transfer Bank</div>
           <div class="toggle-btn" id="skbtn-rincian" onclick="setSKMode('tunai')">💵 Tunai</div>
         </div>
         <input type="hidden" id="sk-mode" value="bank">
@@ -966,6 +1004,7 @@ Citra Dewi"></textarea>
       <input type="hidden" id="pj-edit-id">
       <input type="hidden" id="pj-sumber" value="bank">
       <div class="info-box green" id="pj-saldo-box" style="margin-bottom:12px"><i class="fas fa-wallet"></i><span>Saldo yang dipegang Asisten Bendahara saat ini: <b id="pj-saldo-angka" style="font-family:monospace">Rp 0</b></span></div>
+      <div class="form-group"><label class="form-label">Pilih dari Data Guru</label><select id="pj-guru-pilih" class="form-input" onchange="pilihGuruUntukPinjaman()"><option value="">— Pilih dari Data Guru (opsional) —</option></select></div>
       <div class="form-group"><label class="form-label">Nama Guru/Staf</label><input type="text" id="pj-nama" class="form-input" placeholder="Nama..."></div>
       <div class="form-group"><label class="form-label">Jabatan</label><input type="text" id="pj-jabatan" class="form-input" placeholder="Wali kelas, dll (opsional)"></div>
       <div class="form-group">
@@ -985,6 +1024,32 @@ Citra Dewi"></textarea>
     <div class="sheet-footer">
       <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeSheet('sheet-pinjaman')">Batal</button>
       <button class="btn btn-primary" style="flex:2;justify-content:center" onclick="savePinjaman()"><i class="fas fa-save"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: DATA GURU -->
+<div class="sheet-bg" id="sheet-data-guru">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title" id="dg-sheet-title"><i class="fas fa-chalkboard-teacher" style="color:var(--purple)"></i> Tambah Guru</div>
+      <div class="sheet-close" onclick="closeSheet('sheet-data-guru')"><i class="fas fa-times"></i></div>
+    </div>
+    <div class="sheet-body">
+      <input type="hidden" id="dg-edit-id">
+      <div class="form-group"><label class="form-label">Nama Guru</label><input type="text" id="dg-nama" class="form-input" placeholder="Nama lengkap..."></div>
+      <div class="form-group"><label class="form-label">Jabatan / Wali Kelas</label><input type="text" id="dg-jabatan" class="form-input" placeholder="cth: Wali Kelas VII A, Guru Mapel, dll"></div>
+      <div class="form-group"><label class="form-label">Mengajar (Mapel)</label><input type="text" id="dg-mapel" class="form-input" placeholder="cth: Matematika, PJOK, dll"></div>
+      <div class="grid2">
+        <div class="form-group"><label class="form-label">NIP</label><input type="text" id="dg-nip" class="form-input" placeholder="NIP (opsional)" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label">No. HP</label><input type="tel" id="dg-nohp" class="form-input" placeholder="08..." inputmode="tel"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Keterangan Lainnya</label><input type="text" id="dg-ket" class="form-input" placeholder="Catatan tambahan (opsional)"></div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeSheet('sheet-data-guru')">Batal</button>
+      <button class="btn btn-primary" style="flex:2;justify-content:center" onclick="saveDataGuru()"><i class="fas fa-save"></i> Simpan</button>
     </div>
   </div>
 </div>
@@ -1057,9 +1122,11 @@ Citra Dewi"></textarea>
 </div>
 
 <script>
-let state={settings:{namaSekolah:'',npsn:'',alamat:'',kepalaSekolah:'',noWaKepala:'',bendahara:'',ta:'',semester:'',namaBank:'',noRek:'',atasNama:'',namaBank2:'',noRek2:'',atasNama2:''},kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru:[]};
+let state={settings:{namaSekolah:'',npsn:'',alamat:'',kepalaSekolah:'',noWaKepala:'',bendahara:'',ta:'',semester:'',namaBank:'',noRek:'',atasNama:'',namaBank2:'',noRek2:'',atasNama2:''},kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru:[],dataGuru:[]};
 let _waPendingPayload=null;
 let currentView='dashboard',currentTrxJenis='setor',distribusiTarget=null,currentMgmtTab='kelas',currentLapTab='mutasi',currentRekapTab='kelas',currentDetailSiswaId=null,dsCurrentKelasId=null;
+// Undo/Redo: menyimpan snapshot state sebelum tiap saveData() agar bisa dibatalkan/diulang
+let undoStack=[],redoStack=[],lastSnapshot=null;
 let tabSaldoKelasId=null;
 
 // ===================== INIT =====================
@@ -1090,6 +1157,7 @@ function loadData(){
   if(!state.pinjaman)state.pinjaman=[];
   if(!state.kasTransaksi)state.kasTransaksi=[];
   if(!state.guru)state.guru=[];
+  if(!state.dataGuru)state.dataGuru=[];
   if(!state.serahTerima)state.serahTerima=[];
   if(!state.pengambilanTabungan)state.pengambilanTabungan=[];
   if(!state.settings.namaBank)state.settings.namaBank='';
@@ -1104,8 +1172,51 @@ function loadData(){
   if(state.settings.kepalaSekolah===undefined)state.settings.kepalaSekolah='';
   if(state.settings.noWaKepala===undefined)state.settings.noWaKepala='';
   loadSettings();
+  // Undo/Redo: catat kondisi awal setelah data pertama kali dimuat
+  lastSnapshot=JSON.stringify(state);
+  updateUndoRedoButtons();
 }
-function saveData(){localStorage.setItem('tabbend_v2',JSON.stringify(state));}
+function saveData(){
+  const snap=JSON.stringify(state);
+  if(lastSnapshot!==null){
+    undoStack.push(lastSnapshot);
+    if(undoStack.length>50)undoStack.shift();
+    redoStack=[];
+  }
+  lastSnapshot=snap;
+  localStorage.setItem('tabbend_v2',snap);
+  updateUndoRedoButtons();
+}
+// Undo: kembalikan ke snapshot sebelumnya. Redo: majukan lagi ke snapshot yang dibatalkan.
+function undoAction(){
+  if(undoStack.length===0)return;
+  const target=undoStack.pop();
+  redoStack.push(lastSnapshot);
+  if(redoStack.length>50)redoStack.shift();
+  lastSnapshot=target;
+  state=JSON.parse(target);
+  localStorage.setItem('tabbend_v2',target);
+  populateSelects();loadSettings();renderView(currentView);
+  updateUndoRedoButtons();
+  toast('Perubahan dibatalkan (undo)','success');
+}
+function redoAction(){
+  if(redoStack.length===0)return;
+  const target=redoStack.pop();
+  undoStack.push(lastSnapshot);
+  if(undoStack.length>50)undoStack.shift();
+  lastSnapshot=target;
+  state=JSON.parse(target);
+  localStorage.setItem('tabbend_v2',target);
+  populateSelects();loadSettings();renderView(currentView);
+  updateUndoRedoButtons();
+  toast('Perubahan diulang (redo)','success');
+}
+function updateUndoRedoButtons(){
+  const bu=document.getElementById('btn-undo'),br=document.getElementById('btn-redo');
+  if(bu)bu.classList.toggle('disabled',undoStack.length===0);
+  if(br)br.classList.toggle('disabled',redoStack.length===0);
+}
 
 function loadSettings(){
   const s=state.settings;
@@ -1263,10 +1374,10 @@ function switchView(view){
   if(n)n.classList.add('active');
   currentView=view;
   if(view==='tabungan')tabSaldoKelasId=null;
-  const titles={dashboard:'Dashboard',tabungan:'Tabungan',manajemen:'Kelola',kas:'Kas Bendahara',laporan:'Laporan',pengaturan:'Pengaturan',serahterima:'Serah Terima',pengambilantabungan:'Pengambilan Tabungan',setoran:'Setoran Kelas',pinjaman:'Pinjaman Guru'};
+  const titles={dashboard:'Dashboard',tabungan:'Tabungan',manajemen:'Kelola',kas:'Kas Bendahara',laporan:'Laporan',pengaturan:'Pengaturan',serahterima:'Serah Terima',pengambilantabungan:'Pengambilan Tabungan',setoran:'Setoran Kelas',pinjaman:'Pinjaman Guru',dataguru:'Wali Kelas & Guru'};
   const h=$('h-title');
   if(h)h.textContent=titles[view]||view;
-  const renders={dashboard:renderDashboard,tabungan:renderTabungan,manajemen:()=>renderMgmt(currentMgmtTab),kas:renderKas,laporan:()=>renderLap(currentLapTab),pengaturan:loadSettings,serahterima:renderSerahTerima,pengambilantabungan:renderPengambilanTabungan};
+  const renders={dashboard:renderDashboard,tabungan:renderTabungan,manajemen:()=>renderMgmt(currentMgmtTab),kas:renderKas,laporan:()=>renderLap(currentLapTab),pengaturan:loadSettings,serahterima:renderSerahTerima,pengambilantabungan:renderPengambilanTabungan,dataguru:renderDataGuru};
   if(renders[view])renders[view]();
   closeDrawer();
 }
@@ -1937,11 +2048,13 @@ function getPrintStyles(){
     .sc-green{background:#dcfce7;border:1px solid #86efac;}
     .sc-red{background:#fee2e2;border:1px solid #fca5a5;}
     .sc-purple{background:#ede9fe;border:1px solid #c4b5fd;}
+    .sc-blue{background:#dbeafe;border:1px solid #93c5fd;}
     .sc-label{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;margin-bottom:4px;}
     .sc-val{font-size:11pt;font-weight:900;}
     .sc-green .sc-val{color:#16a34a;}
     .sc-red .sc-val{color:#dc2626;}
     .sc-purple .sc-val{color:#7c3aed;}
+    .sc-blue .sc-val{color:#1d4ed8;}
     .ttd-row{display:flex;justify-content:space-between;margin-top:40px;}
     .ttd-box{width:44%;text-align:center;font-size:9pt;}
     .ttd-title{font-weight:600;color:#64748b;margin-bottom:6px;}
@@ -2037,6 +2150,31 @@ function cetakDetailSiswa(){
   </body></html>`;
   openPrintBlob(html);
   setTimeout(afterCetakSiswaWA,600);
+}
+function exportExcelDetailSiswa(){
+  const siswa=currentDetailSiswaId?getSiswa(currentDetailSiswaId):null;
+  if(!siswa){toast('Data siswa tidak ditemukan','error');return;}
+  const kelas=getKelas(siswa.kelasId);
+  const trxs=getTrxBySiswa(siswa.id).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+  let saldoJalan=0,setor=0,tarik=0;
+  const rows=trxs.map((t,i)=>{
+    const isSetor=t.jenis!=='tarik';
+    saldoJalan+=isSetor?t.nominal:-t.nominal;
+    if(isSetor)setor+=t.nominal;else tarik+=t.nominal;
+    return[i+1,fmtDate(t.tanggal),isSetor?'Setor':'Tarik',isSetor?t.nominal:0,!isSetor?t.nominal:0,saldoJalan,t.ket||'-'];
+  });
+  _exportStyledExcel({
+    title:'BUKU TABUNGAN SISWA',
+    subtitle:`${siswa.nama} · NIS ${siswa.nis||'-'} · Kelas ${kelas?.nama||'-'} · Wali ${kelas?.wali||'-'}`,
+    sheetName:'Tabungan',
+    headers:['NO','TANGGAL','JENIS','SETOR','TARIK','SALDO','KETERANGAN'],
+    rows,
+    totalsRow:['','','JUMLAH',setor,tarik,setor-tarik,''],
+    colWidths:[{wch:5},{wch:12},{wch:10},{wch:14},{wch:14},{wch:14},{wch:24}],
+    textCols:[2,6],numCols:[3,4,5],
+    filename:'Tabungan-'+siswa.nama.replace(/\s+/g,'-')+'.xlsx',
+    emptyMsg:'Belum ada transaksi siswa ini'
+  });
 }
 
 // ===================== KELAS =====================
@@ -2239,7 +2377,7 @@ function openSetoranKelasSheet(kelasId=''){
 }
 function setSKMode(mode){
   $('sk-mode').value=mode;
-  $('skbtn-global').className='toggle-btn'+(mode==='bank'?' on-blue':'');
+  $('skbtn-global').className='toggle-btn'+(mode==='bank'?' on-amber':'');
   $('skbtn-rincian').className='toggle-btn'+(mode==='tunai'?' on-green':'');
   const desc=$('sk-mode-desc');
   if(mode==='bank')desc.innerHTML='<div class="info-box blue" style="background:var(--blue-dim);border-color:var(--blue)"><i class="fas fa-university" style="color:var(--blue)"></i><span style="color:var(--blue)">Setoran masuk ke rekening bank</span></div>';
@@ -2269,7 +2407,7 @@ function saveSetoranKelas(){
   const labelKas=mode==='bank'?'Transfer Bank':'Tunai';
   state.kasTransaksi.push({id:genId(),jenis:jenisKas,nominal,tanggal,ket:'Setoran kelas '+(k.nama||'')+(ket?' - '+ket:''),sumberSetoran:skId,createdAt:Date.now()});
   saveData();closeSheet('sheet-setoran-kelas');renderSetoranKelas();
-  if(tabSaldoKelasId)renderTabunganList();
+  if(currentView==='tabungan')renderTabunganList();
   toast('Setoran dicatat & masuk Kas '+labelKas+'!','success');
   Swal.fire({
     title:'Setoran Tersimpan!',
@@ -2505,6 +2643,7 @@ function renderPinjamanList(){
   }).join('');
 }
 function openPinjamanSheet(){
+  renderPjGuruOptions();
   $('pj-edit-id').value='';$('pj-nama').value='';$('pj-jabatan').value='';$('pj-nominal').value='';$('pj-tanggal').value=todayStr();$('pj-jatuh-tempo').value='';$('pj-ket').value='';setPjSumber('bank');
   $('pinjaman-sheet-title').innerHTML=`<i class="fas fa-hand-holding-usd" style="color:var(--purple)"></i> Catat Pinjaman`;
   $('pj-saldo-angka').textContent=fmtRp(getSaldoAsistenBendahara());
@@ -2513,6 +2652,7 @@ function openPinjamanSheet(){
 }
 function editPinjaman(pjId){
   const p=getPinjaman(pjId);if(!p.id)return;
+  renderPjGuruOptions();
   $('pj-edit-id').value=p.id;$('pj-nama').value=p.nama;$('pj-jabatan').value=p.jabatan||'';$('pj-nominal').value=p.nominal;$('pj-tanggal').value=p.tanggal;$('pj-jatuh-tempo').value=p.jatuhTempo||'';$('pj-ket').value=p.ket||'';setPjSumber(p.sumberDana||'bank');
   $('pinjaman-sheet-title').innerHTML=`<i class="fas fa-edit" style="color:var(--amber)"></i> Edit Pinjaman`;
   $('pj-saldo-angka').textContent=fmtRp(getSaldoAsistenBendahara());
@@ -2966,6 +3106,31 @@ function cetakKas(){
   openPrintBlob(html);
   setTimeout(afterCetakKasWA,600);
 }
+function exportExcelKas(){
+  const s=state.settings,namaBank=s.namaBank||'Bank';
+  const jLabel={setor_bank:`Setor ${namaBank}`,tarik_bank:`Tarik ${namaBank}`,masuk_tunai:'Masuk Tunai',keluar_tunai:'Keluar Tunai'};
+  const allSorted=[...state.kasTransaksi].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.createdAt-b.createdAt);
+  let rb=0,rt=0,totalMasuk=0,totalKeluar=0;
+  const rows=allSorted.map((k,i)=>{
+    const isIn=k.jenis==='setor_bank'||k.jenis==='masuk_tunai';
+    if(k.jenis==='setor_bank')rb+=k.nominal;else if(k.jenis==='tarik_bank')rb-=k.nominal;else if(k.jenis==='masuk_tunai')rt+=k.nominal;else if(k.jenis==='keluar_tunai')rt-=k.nominal;
+    if(isIn)totalMasuk+=k.nominal;else totalKeluar+=k.nominal;
+    return[i+1,fmtDate(k.tanggal),jLabel[k.jenis]||k.jenis,isIn?k.nominal:0,!isIn?k.nominal:0,k.ket||'-',rb,rt];
+  });
+  _exportStyledExcel({
+    title:'LAPORAN KAS BENDAHARA',
+    subtitle:`Bendahara: ${s.bendahara||'-'}  ·  ${namaBank}${s.noRek?' / '+s.noRek:''}`,
+    sheetName:'Kas',
+    headers:['NO','TANGGAL','JENIS','MASUK','KELUAR','KETERANGAN',`SALDO ${namaBank.toUpperCase()}`,'SALDO TUNAI'],
+    rows,
+    totalsRow:['','','JUMLAH',totalMasuk,totalKeluar,'',rb,rt],
+    colWidths:[{wch:5},{wch:12},{wch:16},{wch:14},{wch:14},{wch:22},{wch:14},{wch:14}],
+    textCols:[2,5],numCols:[3,4,6,7],
+    orientation:'landscape',
+    filename:'Laporan-Kas-'+todayStr()+'.xlsx',
+    emptyMsg:'Belum ada data kas'
+  });
+}
 
 // ===================== MUTASI =====================
 function renderMutasi(){
@@ -3002,11 +3167,15 @@ function renderMutasi(){
 
   let trxs=[...itemsSiswa,...itemsKas].sort((a,b)=>b.tanggal.localeCompare(a.tanggal)||b.createdAt-a.createdAt);
 
-  const totSetor=trxs.filter(t=>t._isIn).reduce((s,t)=>s+t.nominal,0);
+  const totSetorSiswa=trxs.filter(t=>t._isIn&&t._src==='siswa').reduce((s,t)=>s+t.nominal,0);
+  const totMasukKas=trxs.filter(t=>t._isIn&&t._src==='kas').reduce((s,t)=>s+t.nominal,0);
   const totTarik=trxs.filter(t=>!t._isIn).reduce((s,t)=>s+t.nominal,0);
   const sumBox=$('mutasi-summary-box');
-  if(sumBox)sumBox.innerHTML=`<div class="stats-row triple" style="margin-bottom:0">
-    <div class="stat-card green" style="padding:10px 12px"><div class="stat-label">Masuk</div><div class="stat-val green" style="font-size:13px">${fmtRp(totSetor)}</div></div>
+  if(sumBox)sumBox.innerHTML=`<div class="stats-row" style="margin-bottom:8px">
+    <div class="stat-card green" style="padding:10px 12px"><div class="stat-label">Masuk dari Siswa</div><div class="stat-val green" style="font-size:13px">${fmtRp(totSetorSiswa)}</div></div>
+    <div class="stat-card blue" style="padding:10px 12px"><div class="stat-label">Masuk Kas Bendahara</div><div class="stat-val" style="font-size:13px;color:var(--blue)">${fmtRp(totMasukKas)}</div></div>
+  </div>
+  <div class="stats-row" style="margin-bottom:0">
     <div class="stat-card red" style="padding:10px 12px"><div class="stat-label">Keluar</div><div class="stat-val red" style="font-size:13px">${fmtRp(totTarik)}</div></div>
     <div class="stat-card pink" style="padding:10px 12px"><div class="stat-label">Transaksi</div><div class="stat-val pink" style="font-size:13px">${trxs.length}</div></div>
   </div>`;
@@ -3078,10 +3247,10 @@ function _buildMutasiExportRows(){
   let trxs=[...itemsSiswa,...itemsKas].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.createdAt-b.createdAt);
   return trxs.map(t=>{
     if(t._src==='kas'){
-      return {tanggal:t.tanggal,uraian:kasLabelDetail(t),kategori:'Kas',isIn:t._isIn,nominal:t.nominal,ket:t.ket||'-'};
+      return {tanggal:t.tanggal,uraian:kasLabelDetail(t),kategori:'Kas',isIn:t._isIn,nominal:t.nominal,ket:t.ket||'-',_src:'kas'};
     }
     const s=getSiswa(t.siswaId),k=getKelas(s.kelasId);
-    return {tanggal:t.tanggal,uraian:s.nama||'?',kategori:k.nama||'-',isIn:t._isIn,nominal:t.nominal,ket:t.ket||'-'};
+    return {tanggal:t.tanggal,uraian:s.nama||'?',kategori:k.nama||'-',isIn:t._isIn,nominal:t.nominal,ket:t.ket||'-',_src:'siswa'};
   });
 }
 function _mutasiFilterInfo(){
@@ -3094,9 +3263,9 @@ function cetakMutasi(){
   const rows=_buildMutasiExportRows();
   const s=state.settings;
   const {jFLabel,periodeTxt}=_mutasiFilterInfo();
-  let totalMasuk=0,totalKeluar=0;
+  let totalMasukSiswa=0,totalMasukKas=0,totalKeluar=0;
   const trRows=rows.map((r,i)=>{
-    if(r.isIn)totalMasuk+=r.nominal;else totalKeluar+=r.nominal;
+    if(r.isIn){if(r._src==='siswa')totalMasukSiswa+=r.nominal;else totalMasukKas+=r.nominal;}else totalKeluar+=r.nominal;
     return`<tr>
       <td class="center">${i+1}</td>
       <td>${fmtDatePrint(r.tanggal)}</td>
@@ -3106,6 +3275,7 @@ function cetakMutasi(){
       <td style="color:#64748b;font-size:8pt">${r.ket}</td>
     </tr>`;
   }).join('');
+  const totalMasuk=totalMasukSiswa+totalMasukKas;
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Laporan Mutasi</title>
   <style>${getPrintStyles()}</style></head><body>
   <div class="kop">
@@ -3121,7 +3291,8 @@ function cetakMutasi(){
     <div class="info-box info-box-blue"><div class="info-label info-label-blue">Jenis</div><div class="info-val">${jFLabel}</div></div>
   </div>
   <div class="summary-bar">
-    <div class="summary-card sc-green"><div class="sc-label">Total Masuk</div><div class="sc-val">${fmtRpPrint(totalMasuk)}</div></div>
+    <div class="summary-card sc-green"><div class="sc-label">Masuk dari Siswa</div><div class="sc-val">${fmtRpPrint(totalMasukSiswa)}</div></div>
+    <div class="summary-card sc-blue"><div class="sc-label">Masuk Kas Bendahara</div><div class="sc-val">${fmtRpPrint(totalMasukKas)}</div></div>
     <div class="summary-card sc-red"><div class="sc-label">Total Keluar</div><div class="sc-val">${fmtRpPrint(totalKeluar)}</div></div>
     <div class="summary-card sc-purple"><div class="sc-label">Transaksi</div><div class="sc-val">${rows.length}</div></div>
   </div>
@@ -3142,15 +3313,16 @@ function exportPNGMutasi(){
   const rows=_buildMutasiExportRows();
   const s=state.settings;
   const {jFLabel,periodeTxt}=_mutasiFilterInfo();
-  let totalMasuk=0,totalKeluar=0;
+  let totalMasukSiswa=0,totalMasukKas=0,totalKeluar=0;
   const trRows=rows.map((r,i)=>{
-    if(r.isIn)totalMasuk+=r.nominal;else totalKeluar+=r.nominal;
+    if(r.isIn){if(r._src==='siswa')totalMasukSiswa+=r.nominal;else totalMasukKas+=r.nominal;}else totalKeluar+=r.nominal;
     return`<tr><td class="center">${i+1}</td><td>${fmtDatePrint(r.tanggal)}</td><td>${r.uraian} <span style="color:#94a3b8;font-size:7.5pt">(${r.kategori})</span></td><td class="right" style="color:#16a34a">${r.isIn?fmtRpPrint(r.nominal):'-'}</td><td class="right" style="color:#dc2626">${!r.isIn?fmtRpPrint(r.nominal):'-'}</td><td style="color:#64748b;font-size:8pt">${r.ket}</td></tr>`;
   }).join('');
+  const totalMasuk=totalMasukSiswa+totalMasukKas;
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Laporan Mutasi</title><style>${getPrintStyles()}</style></head><body>
   <div class="kop"><div class="kop-stripe"></div><div class="kop-text"><div class="kop-label">Laporan Mutasi</div><div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div><div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div></div></div>
   <div class="info-grid" style="margin-bottom:10px"><div class="info-box info-box-blue"><div class="info-label info-label-blue">Periode</div><div class="info-val">${periodeTxt}</div></div><div class="info-box info-box-blue"><div class="info-label info-label-blue">Jenis</div><div class="info-val">${jFLabel}</div></div></div>
-  <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Total Masuk</div><div class="sc-val">${fmtRpPrint(totalMasuk)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Keluar</div><div class="sc-val">${fmtRpPrint(totalKeluar)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Transaksi</div><div class="sc-val">${rows.length}</div></div></div>
+  <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Masuk dari Siswa</div><div class="sc-val">${fmtRpPrint(totalMasukSiswa)}</div></div><div class="summary-card sc-blue"><div class="sc-label">Masuk Kas Bendahara</div><div class="sc-val">${fmtRpPrint(totalMasukKas)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Keluar</div><div class="sc-val">${fmtRpPrint(totalKeluar)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Transaksi</div><div class="sc-val">${rows.length}</div></div></div>
   <table><thead><tr><th class="center">No</th><th>Tanggal</th><th>Uraian</th><th class="right">Masuk</th><th class="right">Keluar</th><th>Keterangan</th></tr></thead><tbody>${trRows||'<tr><td colspan="6" class="center" style="color:#94a3b8;padding:20px">Tidak ada mutasi pada periode ini</td></tr>'}</tbody><tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalMasuk)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalKeluar)}</td><td></td></tr></table>
   <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
   <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
@@ -3163,14 +3335,15 @@ function exportExcelMutasi(){
   if(!rows.length){toast('Tidak ada data mutasi pada periode ini','error');return;}
   const s=state.settings;
   const {dari,sampai,jFLabel,periodeTxt}=_mutasiFilterInfo();
-  let totalMasuk=0,totalKeluar=0;
+  let totalMasukSiswa=0,totalMasukKas=0,totalKeluar=0;
   const dataRows=rows.map((r,i)=>{
-    if(r.isIn)totalMasuk+=r.nominal;else totalKeluar+=r.nominal;
+    if(r.isIn){if(r._src==='siswa')totalMasukSiswa+=r.nominal;else totalMasukKas+=r.nominal;}else totalKeluar+=r.nominal;
     return [i+1,fmtDate(r.tanggal),r.uraian,r.kategori,r.isIn?r.nominal:0,!r.isIn?r.nominal:0,r.ket];
   });
+  const totalMasuk=totalMasukSiswa+totalMasukKas;
 
   const totalCols=7;
-  const headerRowIdx=4;
+  const headerRowIdx=5;
   const dataStartIdx=headerRowIdx+1;
   const totalRowIdx=dataStartIdx+dataRows.length;
 
@@ -3178,6 +3351,7 @@ function exportExcelMutasi(){
   aoa.push([s.namaSekolah||'Nama Sekolah']);
   aoa.push(['LAPORAN MUTASI']);
   aoa.push([`Periode: ${periodeTxt}  ·  Jenis: ${jFLabel}`]);
+  aoa.push([`Masuk dari Siswa: Rp ${totalMasukSiswa.toLocaleString('id-ID')}  ·  Masuk Kas Bendahara: Rp ${totalMasukKas.toLocaleString('id-ID')}  ·  Keluar: Rp ${totalKeluar.toLocaleString('id-ID')}`]);
   aoa.push([]);
   aoa.push(['NO','TANGGAL','URAIAN','KATEGORI','MASUK','KELUAR','KETERANGAN']);
   dataRows.forEach(r=>aoa.push(r));
@@ -3187,10 +3361,11 @@ function exportExcelMutasi(){
   ws['!merges']=[
     {s:{r:0,c:0},e:{r:0,c:totalCols-1}},
     {s:{r:1,c:0},e:{r:1,c:totalCols-1}},
-    {s:{r:2,c:0},e:{r:2,c:totalCols-1}}
+    {s:{r:2,c:0},e:{r:2,c:totalCols-1}},
+    {s:{r:3,c:0},e:{r:3,c:totalCols-1}}
   ];
   ws['!cols']=[{wch:5},{wch:12},{wch:26},{wch:14},{wch:14},{wch:14},{wch:24}];
-  ws['!rows']=[{hpt:20},{hpt:18},{hpt:14},{hpt:6},{hpt:22}];
+  ws['!rows']=[{hpt:20},{hpt:18},{hpt:14},{hpt:14},{hpt:6},{hpt:22}];
 
   const thin={style:'thin',color:{rgb:'94A3B8'}};
   const borderAll={top:thin,bottom:thin,left:thin,right:thin};
@@ -3203,6 +3378,7 @@ function exportExcelMutasi(){
   setCellStyle(0,0,{font:{bold:true,sz:13,color:{rgb:'DB2777'}},alignment:{horizontal:'center',vertical:'center'}});
   setCellStyle(1,0,{font:{bold:true,sz:11,color:{rgb:'1E293B'}},alignment:{horizontal:'center',vertical:'center'}});
   setCellStyle(2,0,{font:{sz:9,color:{rgb:'64748B'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(3,0,{font:{bold:true,sz:9,color:{rgb:'1D4ED8'}},alignment:{horizontal:'center',vertical:'center'}});
   for(let c=0;c<totalCols;c++){
     setCellStyle(headerRowIdx,c,{
       font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
@@ -3244,6 +3420,136 @@ function exportExcelMutasi(){
   const fname='Laporan-Mutasi-'+(dari||'awal')+'_'+(sampai||'sekarang')+'.xlsx';
   XLSX.writeFile(wb,fname);
   toast('Excel berhasil diunduh!','success');
+}
+
+// ===================== HELPER EXCEL GENERIK (dipakai fungsi export baru) =====================
+function _exportStyledExcel(opts){
+  // opts: {title, subtitle, sheetName, headers, rows, totalsRow, colWidths, textCols, numCols, filename, orientation, emptyMsg}
+  if(typeof XLSX==='undefined'){toast('Modul Excel belum siap, coba lagi sebentar','error');return false;}
+  if(!opts.rows.length){toast(opts.emptyMsg||'Tidak ada data untuk diekspor','error');return false;}
+  const s=state.settings;
+  const totalCols=opts.headers.length;
+  const headerRowIdx=4;
+  const dataStartIdx=headerRowIdx+1;
+  const totalRowIdx=dataStartIdx+opts.rows.length;
+
+  const aoa=[];
+  aoa.push([s.namaSekolah||'Nama Sekolah']);
+  aoa.push([opts.title]);
+  aoa.push([opts.subtitle||'']);
+  aoa.push([]);
+  aoa.push(opts.headers);
+  opts.rows.forEach(r=>aoa.push(r));
+  if(opts.totalsRow)aoa.push(opts.totalsRow);
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:totalCols-1}},
+    {s:{r:1,c:0},e:{r:1,c:totalCols-1}},
+    {s:{r:2,c:0},e:{r:2,c:totalCols-1}}
+  ];
+  ws['!cols']=opts.colWidths||opts.headers.map(()=>({wch:14}));
+  ws['!rows']=[{hpt:20},{hpt:18},{hpt:14},{hpt:6},{hpt:22}];
+
+  const thin={style:'thin',color:{rgb:'94A3B8'}};
+  const borderAll={top:thin,bottom:thin,left:thin,right:thin};
+  const numFmt='#,##0;-#,##0;"-"';
+  const setCellStyle=(r,c,style)=>{
+    const ref=XLSX.utils.encode_cell({r,c});
+    if(!ws[ref])ws[ref]={t:'s',v:''};
+    ws[ref].s=style;
+  };
+  setCellStyle(0,0,{font:{bold:true,sz:13,color:{rgb:'DB2777'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(1,0,{font:{bold:true,sz:11,color:{rgb:'1E293B'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(2,0,{font:{sz:9,color:{rgb:'64748B'}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<totalCols;c++){
+    setCellStyle(headerRowIdx,c,{
+      font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+      fill:{fgColor:{rgb:'DB2777'}},
+      alignment:{horizontal:'center',vertical:'center',wrapText:true},
+      border:borderAll
+    });
+  }
+  const textCols=new Set(opts.textCols||[]);
+  const numCols=new Set(opts.numCols||[]);
+  for(let i=0;i<opts.rows.length;i++){
+    const r=dataStartIdx+i;
+    const zebra=i%2===0?'FFFFFF':'FDF2F8';
+    for(let c=0;c<totalCols;c++){
+      setCellStyle(r,c,{
+        font:{sz:9,color:{rgb:'1E293B'}},
+        fill:{fgColor:{rgb:zebra}},
+        alignment:{horizontal:textCols.has(c)?'left':'center',vertical:'center'},
+        border:borderAll,
+        numFmt:numCols.has(c)?numFmt:undefined
+      });
+    }
+  }
+  if(opts.totalsRow){
+    for(let c=0;c<totalCols;c++){
+      setCellStyle(totalRowIdx,c,{
+        font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+        fill:{fgColor:{rgb:'1E293B'}},
+        alignment:{horizontal:'center',vertical:'center'},
+        border:borderAll,
+        numFmt:numCols.has(c)?numFmt:undefined
+      });
+    }
+  }
+  ws['!pageSetup']={paperSize:9,orientation:opts.orientation||'portrait',fitToWidth:1,fitToHeight:0,horizontalDpi:300,verticalDpi:300};
+  ws['!margins']={left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2};
+  ws['!printOptions']={gridLines:false};
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,opts.sheetName||'Sheet1');
+  XLSX.writeFile(wb,opts.filename);
+  toast('Excel berhasil diunduh!','success');
+  return true;
+}
+function _exportSingleDocExcel(opts){
+  // opts: {title, subtitle, sheetName, fields:[[label,value]], nominalLabel, nominalValue, filename}
+  if(typeof XLSX==='undefined'){toast('Modul Excel belum siap, coba lagi sebentar','error');return false;}
+  const s=state.settings;
+  const aoa=[];
+  aoa.push([s.namaSekolah||'Nama Sekolah','']);
+  aoa.push([opts.title,'']);
+  aoa.push([opts.subtitle||'','']);
+  aoa.push(['','']);
+  opts.fields.forEach(f=>aoa.push(f));
+  aoa.push(['','']);
+  aoa.push([opts.nominalLabel||'NOMINAL',opts.nominalValue||0]);
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}},{s:{r:2,c:0},e:{r:2,c:1}}];
+  ws['!cols']=[{wch:26},{wch:34}];
+  const thin={style:'thin',color:{rgb:'94A3B8'}};
+  const borderAll={top:thin,bottom:thin,left:thin,right:thin};
+  const numFmt='#,##0;-#,##0;"-"';
+  const setCellStyle=(r,c,style)=>{
+    const ref=XLSX.utils.encode_cell({r,c});
+    if(!ws[ref])ws[ref]={t:'s',v:''};
+    ws[ref].s=style;
+  };
+  setCellStyle(0,0,{font:{bold:true,sz:13,color:{rgb:'DB2777'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(1,0,{font:{bold:true,sz:11,color:{rgb:'1E293B'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(2,0,{font:{sz:9,color:{rgb:'64748B'}},alignment:{horizontal:'center',vertical:'center'}});
+  const fieldStart=4;
+  for(let i=0;i<opts.fields.length;i++){
+    const r=fieldStart+i;
+    const zebra=i%2===0?'FFFFFF':'FDF2F8';
+    setCellStyle(r,0,{font:{bold:true,sz:9,color:{rgb:'475569'}},fill:{fgColor:{rgb:zebra}},alignment:{horizontal:'left',vertical:'center'},border:borderAll});
+    setCellStyle(r,1,{font:{sz:9,color:{rgb:'1E293B'}},fill:{fgColor:{rgb:zebra}},alignment:{horizontal:'left',vertical:'center'},border:borderAll});
+  }
+  const nomRow=fieldStart+opts.fields.length+1;
+  setCellStyle(nomRow,0,{font:{bold:true,sz:10,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'DB2777'}},alignment:{horizontal:'left',vertical:'center'},border:borderAll});
+  setCellStyle(nomRow,1,{font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'DB2777'}},alignment:{horizontal:'left',vertical:'center'},border:borderAll,numFmt:numFmt});
+  ws['!pageSetup']={paperSize:9,orientation:'portrait',fitToWidth:1,fitToHeight:0};
+  ws['!printOptions']={gridLines:false};
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,opts.sheetName||'Dokumen');
+  XLSX.writeFile(wb,opts.filename);
+  toast('Excel berhasil diunduh!','success');
+  return true;
 }
 
 // ===================== REKAP =====================
@@ -3371,6 +3677,186 @@ function cetakRekapBulan(){
   openPrintBlob(html);
   setTimeout(afterCetakRekapBulanWA,600);
 }
+function exportExcelRekapBulan(){
+  const tahun=parseInt($('rekap-tahun')?.value||new Date().getFullYear());
+  const bulanNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const data=bulanNames.map((n,m)=>{
+    const prefix=`${tahun}-${String(m+1).padStart(2,'0')}`;
+    const trxBulan=state.transaksi.filter(t=>t.tanggal.startsWith(prefix));
+    const setor=trxBulan.filter(t=>t.jenis!=='tarik').reduce((a,t)=>a+t.nominal,0);
+    const tarik=trxBulan.filter(t=>t.jenis==='tarik').reduce((a,t)=>a+t.nominal,0);
+    return{nama:n,setor,tarik,n:trxBulan.length};
+  });
+  const totalSetor=data.reduce((a,d)=>a+d.setor,0);
+  const totalTarik=data.reduce((a,d)=>a+d.tarik,0);
+  const totalN=data.reduce((a,d)=>a+d.n,0);
+  const rows=data.map(d=>[d.nama+' '+tahun,d.setor,d.tarik,d.setor-d.tarik,d.n]);
+  _exportStyledExcel({
+    title:'REKAP TABUNGAN PER BULAN '+tahun,
+    subtitle:`Tahun ${tahun}  ·  ${totalN} Total Transaksi`,
+    sheetName:'Rekap Bulan',
+    headers:['BULAN','TOTAL SETOR','TOTAL TARIK','NET','JML TRANSAKSI'],
+    rows,
+    totalsRow:['TOTAL '+tahun,totalSetor,totalTarik,totalSetor-totalTarik,totalN],
+    colWidths:[{wch:16},{wch:16},{wch:16},{wch:16},{wch:14}],
+    textCols:[0],numCols:[1,2,3,4],
+    filename:'Rekap-Bulan-'+tahun+'.xlsx',
+    emptyMsg:'Tidak ada data tahun '+tahun
+  });
+}
+
+function _buildRekapKelasRows(){
+  return[...state.kelas].sort((a,b)=>a.nama.localeCompare(b.nama,undefined,{numeric:true,sensitivity:'base'})).map(k=>{
+    const sw=state.siswa.filter(s=>s.kelasId===k.id);
+    const setor=sw.reduce((s,si)=>s+getTotalSetor(si.id),0);
+    const tarik=sw.reduce((s,si)=>s+getTotalTarik(si.id),0);
+    const skList=(state.setoranKelas||[]).filter(sk=>sk.kelasId===k.id);
+    const totalSK=skList.reduce((s,sk)=>s+sk.nominal,0);
+    return{k,jmlSiswa:sw.length,setor,tarik,saldo:setor-tarik,totalSK,jmlSK:skList.length};
+  });
+}
+function cetakRekapKelas(){
+  const s=state.settings;
+  const data=_buildRekapKelasRows();
+  if(!data.length){toast('Belum ada data kelas','error');return;}
+  let totalSetor=0,totalTarik=0,totalSK=0;
+  const rows=data.map(d=>{
+    totalSetor+=d.setor;totalTarik+=d.tarik;totalSK+=d.totalSK;
+    return`<tr>
+      <td style="font-weight:700">${d.k.nama}</td>
+      <td>${d.k.wali||'-'}</td>
+      <td class="center">${d.jmlSiswa}</td>
+      <td class="right" style="color:#16a34a">${fmtRpPrint(d.setor)}</td>
+      <td class="right" style="color:#dc2626">${fmtRpPrint(d.tarik)}</td>
+      <td class="right" style="font-weight:700">${fmtRpPrint(d.saldo)}</td>
+      <td class="right" style="color:#2563eb">${fmtRpPrint(d.totalSK)}</td>
+    </tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rekap Tabungan Per Kelas</title>
+  <style>${getPrintStyles()}</style></head><body>
+  <div class="kop"><div class="kop-stripe"></div><div class="kop-text"><div class="kop-label">Rekap Tabungan Per Kelas</div><div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div><div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div></div></div>
+  <div class="summary-bar">
+    <div class="summary-card sc-green"><div class="sc-label">Total Setor</div><div class="sc-val">${fmtRpPrint(totalSetor)}</div></div>
+    <div class="summary-card sc-red"><div class="sc-label">Total Tarik</div><div class="sc-val">${fmtRpPrint(totalTarik)}</div></div>
+    <div class="summary-card sc-purple"><div class="sc-label">Saldo Bersih</div><div class="sc-val">${fmtRpPrint(totalSetor-totalTarik)}</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Kelas</th><th>Wali Kelas</th><th class="center">Jml Siswa</th><th class="right">Total Setor</th><th class="right">Total Tarik</th><th class="right">Saldo</th><th class="right">Setor ke Kas</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalSetor)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalTarik)}</td><td class="right">${fmtRpPrint(totalSetor-totalTarik)}</td><td class="right">${fmtRpPrint(totalSK)}</td></tr>
+  </table>
+  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+  openPrintBlob(html);
+}
+function exportPNGRekapKelas(){
+  const s=state.settings;
+  const data=_buildRekapKelasRows();
+  if(!data.length){toast('Belum ada data kelas','error');return;}
+  let totalSetor=0,totalTarik=0,totalSK=0;
+  const rows=data.map(d=>{
+    totalSetor+=d.setor;totalTarik+=d.tarik;totalSK+=d.totalSK;
+    return`<tr><td style="font-weight:700">${d.k.nama}</td><td>${d.k.wali||'-'}</td><td class="center">${d.jmlSiswa}</td><td class="right" style="color:#16a34a">${fmtRpPrint(d.setor)}</td><td class="right" style="color:#dc2626">${fmtRpPrint(d.tarik)}</td><td class="right" style="font-weight:700">${fmtRpPrint(d.saldo)}</td><td class="right" style="color:#2563eb">${fmtRpPrint(d.totalSK)}</td></tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rekap Tabungan Per Kelas</title><style>${getPrintStyles()}</style></head><body>
+  <div class="kop"><div class="kop-stripe"></div><div class="kop-text"><div class="kop-label">Rekap Tabungan Per Kelas</div><div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div><div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div></div></div>
+  <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Total Setor</div><div class="sc-val">${fmtRpPrint(totalSetor)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Tarik</div><div class="sc-val">${fmtRpPrint(totalTarik)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Saldo Bersih</div><div class="sc-val">${fmtRpPrint(totalSetor-totalTarik)}</div></div></div>
+  <table><thead><tr><th>Kelas</th><th>Wali Kelas</th><th class="center">Jml Siswa</th><th class="right">Total Setor</th><th class="right">Total Tarik</th><th class="right">Saldo</th><th class="right">Setor ke Kas</th></tr></thead><tbody>${rows}</tbody><tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalSetor)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalTarik)}</td><td class="right">${fmtRpPrint(totalSetor-totalTarik)}</td><td class="right">${fmtRpPrint(totalSK)}</td></tr></table>
+  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  </body></html>`;
+  exportHTMLasPNG(html,'rekap-per-kelas');
+}
+function exportExcelRekapKelas(){
+  const data=_buildRekapKelasRows();
+  let totalSetor=0,totalTarik=0,totalSK=0;
+  const rows=data.map(d=>{totalSetor+=d.setor;totalTarik+=d.tarik;totalSK+=d.totalSK;return[d.k.nama,d.k.wali||'-',d.jmlSiswa,d.setor,d.tarik,d.saldo,d.totalSK];});
+  _exportStyledExcel({
+    title:'REKAP TABUNGAN PER KELAS',
+    subtitle:`Total ${data.length} kelas`,
+    sheetName:'Rekap Kelas',
+    headers:['KELAS','WALI KELAS','JML SISWA','TOTAL SETOR','TOTAL TARIK','SALDO','SETOR KE KAS'],
+    rows,
+    totalsRow:['TOTAL','','',totalSetor,totalTarik,totalSetor-totalTarik,totalSK],
+    colWidths:[{wch:12},{wch:20},{wch:10},{wch:16},{wch:16},{wch:16},{wch:16}],
+    textCols:[0,1],numCols:[3,4,5,6],
+    orientation:'landscape',
+    filename:'Rekap-Per-Kelas.xlsx',
+    emptyMsg:'Belum ada data kelas'
+  });
+}
+
+function _buildRekapSiswaRows(){
+  return[...state.siswa].sort((a,b)=>(getKelas(a.kelasId).nama||'').localeCompare(getKelas(b.kelasId).nama||'')||a.absen-b.absen).map(sv=>{
+    const k=getKelas(sv.kelasId),setor=getTotalSetor(sv.id),tarik=getTotalTarik(sv.id);
+    return{sv,k,setor,tarik,saldo:setor-tarik};
+  });
+}
+function cetakRekapSiswa(){
+  const s=state.settings;
+  const data=_buildRekapSiswaRows();
+  if(!data.length){toast('Belum ada data siswa','error');return;}
+  let totalSetor=0,totalTarik=0;
+  const rows=data.map((d,i)=>{
+    totalSetor+=d.setor;totalTarik+=d.tarik;
+    return`<tr><td class="center">${d.sv.absen||i+1}</td><td>${d.sv.nama}</td><td>${d.k.nama||'-'}</td><td class="right" style="color:#16a34a">${fmtRpPrint(d.setor)}</td><td class="right" style="color:#dc2626">${fmtRpPrint(d.tarik)}</td><td class="right" style="font-weight:700">${fmtRpPrint(d.saldo)}</td></tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rekap Tabungan Per Penabung</title>
+  <style>${getPrintStyles()}</style></head><body>
+  <div class="kop"><div class="kop-stripe"></div><div class="kop-text"><div class="kop-label">Rekap Tabungan Per Penabung</div><div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div><div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div></div></div>
+  <div class="summary-bar">
+    <div class="summary-card sc-green"><div class="sc-label">Total Setor</div><div class="sc-val">${fmtRpPrint(totalSetor)}</div></div>
+    <div class="summary-card sc-red"><div class="sc-label">Total Tarik</div><div class="sc-val">${fmtRpPrint(totalTarik)}</div></div>
+    <div class="summary-card sc-purple"><div class="sc-label">Saldo Bersih</div><div class="sc-val">${fmtRpPrint(totalSetor-totalTarik)}</div></div>
+  </div>
+  <table>
+    <thead><tr><th class="center">No</th><th>Nama Siswa</th><th>Kelas</th><th class="right">Total Setor</th><th class="right">Total Tarik</th><th class="right">Saldo</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalSetor)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalTarik)}</td><td class="right">${fmtRpPrint(totalSetor-totalTarik)}</td></tr>
+  </table>
+  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+  openPrintBlob(html);
+}
+function exportPNGRekapSiswa(){
+  const s=state.settings;
+  const data=_buildRekapSiswaRows();
+  if(!data.length){toast('Belum ada data siswa','error');return;}
+  let totalSetor=0,totalTarik=0;
+  const rows=data.map((d,i)=>{
+    totalSetor+=d.setor;totalTarik+=d.tarik;
+    return`<tr><td class="center">${d.sv.absen||i+1}</td><td>${d.sv.nama}</td><td>${d.k.nama||'-'}</td><td class="right" style="color:#16a34a">${fmtRpPrint(d.setor)}</td><td class="right" style="color:#dc2626">${fmtRpPrint(d.tarik)}</td><td class="right" style="font-weight:700">${fmtRpPrint(d.saldo)}</td></tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rekap Tabungan Per Penabung</title><style>${getPrintStyles()}</style></head><body>
+  <div class="kop"><div class="kop-stripe"></div><div class="kop-text"><div class="kop-label">Rekap Tabungan Per Penabung</div><div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div><div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div></div></div>
+  <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Total Setor</div><div class="sc-val">${fmtRpPrint(totalSetor)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Tarik</div><div class="sc-val">${fmtRpPrint(totalTarik)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Saldo Bersih</div><div class="sc-val">${fmtRpPrint(totalSetor-totalTarik)}</div></div></div>
+  <table><thead><tr><th class="center">No</th><th>Nama Siswa</th><th>Kelas</th><th class="right">Total Setor</th><th class="right">Total Tarik</th><th class="right">Saldo</th></tr></thead><tbody>${rows}</tbody><tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalSetor)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalTarik)}</td><td class="right">${fmtRpPrint(totalSetor-totalTarik)}</td></tr></table>
+  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  </body></html>`;
+  exportHTMLasPNG(html,'rekap-per-penabung');
+}
+function exportExcelRekapSiswa(){
+  const data=_buildRekapSiswaRows();
+  let totalSetor=0,totalTarik=0;
+  const rows=data.map((d,i)=>{totalSetor+=d.setor;totalTarik+=d.tarik;return[d.sv.absen||i+1,d.sv.nama,d.k.nama||'-',d.setor,d.tarik,d.saldo];});
+  _exportStyledExcel({
+    title:'REKAP TABUNGAN PER PENABUNG',
+    subtitle:`Total ${data.length} siswa`,
+    sheetName:'Rekap Penabung',
+    headers:['NO','NAMA SISWA','KELAS','TOTAL SETOR','TOTAL TARIK','SALDO'],
+    rows,
+    totalsRow:['','','JUMLAH',totalSetor,totalTarik,totalSetor-totalTarik],
+    colWidths:[{wch:6},{wch:24},{wch:12},{wch:16},{wch:16},{wch:16}],
+    textCols:[1,2],numCols:[3,4,5],
+    filename:'Rekap-Per-Penabung.xlsx',
+    emptyMsg:'Belum ada data siswa'
+  });
+}
 
 // ===================== LAPORAN SETORAN BULAN (PER KELAS) =====================
 function _buildLaporanSetoranBulanHTML(){
@@ -3448,6 +3934,37 @@ function exportPNGLaporanSetoranBulan(){
   const bulan=$('lsb-bulan')?.value||new Date().toISOString().slice(0,7);
   const nama='laporan-setoran-'+(k?.nama||'kelas').replace(/\s+/g,'-').toLowerCase()+'-'+bulan;
   exportHTMLasPNG(html,nama);
+}
+function exportExcelLaporanSetoranBulan(){
+  const kId=tabSaldoKelasId;
+  if(!kId){toast('Pilih kelas dulu','error');return;}
+  const bulan=$('lsb-bulan')?.value||new Date().toISOString().slice(0,7);
+  const k=getKelas(kId);
+  const bulanNames=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const [ty,tm]=bulan.split('-');
+  const labelBulan=`${bulanNames[+tm]||tm} ${ty}`;
+  const siswaKelas=[...state.siswa].filter(sv=>sv.kelasId===kId).sort((a,b)=>(a.absen||999)-(b.absen||999));
+  let totalNominalBulan=0;
+  const rows=siswaKelas.map((sv,i)=>{
+    const trxBulan=getTrxBySiswa(sv.id).filter(t=>t.jenis!=='tarik'&&t.tanggal.startsWith(bulan));
+    const sudah=trxBulan.length>0;
+    const totalSv=trxBulan.reduce((a,t)=>a+t.nominal,0);
+    totalNominalBulan+=totalSv;
+    const tglList=trxBulan.map(t=>fmtDate(t.tanggal)).join(', ');
+    return[sv.absen||i+1,sv.nama,sudah?'Sudah':'Belum',sudah?tglList:'-',sudah?totalSv:0];
+  });
+  _exportStyledExcel({
+    title:'LAPORAN SETORAN TABUNGAN SISWA',
+    subtitle:`Kelas ${k.nama||'-'} · Wali ${k.wali||'-'}  ·  Periode ${labelBulan}`,
+    sheetName:'Setoran Bulan',
+    headers:['NO','NAMA SISWA','STATUS','TANGGAL SETOR','TOTAL BULAN INI'],
+    rows,
+    totalsRow:['','','','TOTAL',totalNominalBulan],
+    colWidths:[{wch:5},{wch:24},{wch:10},{wch:30},{wch:16}],
+    textCols:[1,2,3],numCols:[4],
+    filename:'Laporan-Setoran-'+(k.nama||'kelas').replace(/\s+/g,'-')+'-'+bulan+'.xlsx',
+    emptyMsg:'Belum ada siswa di kelas ini'
+  });
 }
 
 // ===================== TABUNGAN HARIAN (KALENDER SEBULAN) =====================
@@ -3682,13 +4199,15 @@ function renderRekKoran(){
   if(!kId){el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><p>Pilih kelas terlebih dahulu</p></div>';return;}
   const k=getKelas(kId);
 
-  // --- Kumpulkan semua transaksi dari 2 sumber ---
-  // 1. Transaksi per siswa (state.transaksi) yang siswa-nya masuk kelas ini
+  // --- Kumpulkan transaksi dari 2 sumber yang BEDA MAKNA (jangan dijumlah jadi satu) ---
+  // 1. Setor Siswa: transaksi tabungan per siswa (state.transaksi) -> ini yang menentukan Saldo Tabungan Siswa
+  // 2. Setor Wali Kelas: uang yang SUDAH diserahkan wali kelas ke bendahara (state.setoranKelas) -> hanya info status
+  //    Catatan: kalau setoran kelas dipakai mode "rincian", nominalnya sudah otomatis tercatat juga sebagai
+  //    transaksi per siswa (jenis 'setor_kelas'). Makanya kolom Setor Wali Kelas TIDAK ikut dijumlah ke Saldo,
+  //    supaya uang yang sama tidak terhitung dua kali.
   const siswaKelas=state.siswa.filter(s=>s.kelasId===kId);
   const siswaIds=new Set(siswaKelas.map(s=>s.id));
   let trxSiswa=state.transaksi.filter(t=>siswaIds.has(t.siswaId));
-
-  // 2. Setoran kelas langsung (state.setoranKelas) untuk kelas ini
   let skKelas=(state.setoranKelas||[]).filter(sk=>sk.kelasId===kId);
 
   // Filter bulan jika dipilih
@@ -3697,10 +4216,10 @@ function renderRekKoran(){
     skKelas=skKelas.filter(sk=>sk.tanggal.startsWith(bulan));
   }
 
-  // Gabungkan jadi satu array baris buku
+  // Gabungkan jadi satu array baris buku, dengan 3 kolom nilai terpisah
   let allBaris=[
-    ...trxSiswa.map(t=>({tanggal:t.tanggal,ket:t.ket||t.keterangan||t.jenis,setor:t.jenis!=='tarik'?t.nominal:0,tarik:t.jenis==='tarik'?t.nominal:0,createdAt:t.createdAt||0})),
-    ...skKelas.map(sk=>({tanggal:sk.tanggal,ket:sk.ket||'Setoran Kelas',setor:sk.nominal,tarik:0,createdAt:sk.createdAt||0}))
+    ...trxSiswa.map(t=>({tanggal:t.tanggal,ket:t.ket||t.keterangan||t.jenis,setorSiswa:t.jenis!=='tarik'?t.nominal:0,setorWali:0,tarik:t.jenis==='tarik'?t.nominal:0,createdAt:t.createdAt||0})),
+    ...skKelas.map(sk=>({tanggal:sk.tanggal,ket:sk.ket||'Setoran Kelas',setorSiswa:0,setorWali:sk.nominal,tarik:0,createdAt:sk.createdAt||0}))
   ];
   allBaris.sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.createdAt-b.createdAt);
 
@@ -3709,19 +4228,21 @@ function renderRekKoran(){
     return;
   }
 
-  // Hitung total
-  const totalSetor=allBaris.reduce((s,b)=>s+b.setor,0);
+  // Hitung total per kolom
+  const totalSetorSiswa=allBaris.reduce((s,b)=>s+b.setorSiswa,0);
+  const totalSetorWali=allBaris.reduce((s,b)=>s+b.setorWali,0);
   const totalTarik=allBaris.reduce((s,b)=>s+b.tarik,0);
-  const totalSaldo=totalSetor-totalTarik;
+  // Saldo Tabungan Siswa = HANYA dari setor siswa - tarik (uang yang benar-benar tercatat jadi tabungan siswa)
+  const saldoTabunganSiswa=totalSetorSiswa-totalTarik;
+  // Belum Disetor ke bendahara pakai fungsi yang sama dengan menu Saldo, biar selalu sinkron dengan badge di sana
+  const belumDisetor=bulan?Math.max(0,saldoTabunganSiswa-totalSetorWali):getBelumDisetorKelas(kId);
   const periodeLabel=bulan?new Date(bulan+'-02').toLocaleDateString('id-ID',{month:'long',year:'numeric'}):'Semua Periode';
 
-  // Saldo awal (sebelum bulan filter)
+  // Saldo awal (sebelum bulan filter) — juga hanya dari setor siswa - tarik, bukan setoran wali kelas
   let saldoBerjalan=0;
   if(bulan){
     const trxSiswaSebelum=state.transaksi.filter(t=>siswaIds.has(t.siswaId)&&t.tanggal<bulan+'-01');
-    const skSebelum=(state.setoranKelas||[]).filter(sk=>sk.kelasId===kId&&sk.tanggal<bulan+'-01');
-    saldoBerjalan=trxSiswaSebelum.reduce((s,t)=>t.jenis!=='tarik'?s+t.nominal:s-t.nominal,0)
-                 +skSebelum.reduce((s,sk)=>s+sk.nominal,0);
+    saldoBerjalan=trxSiswaSebelum.reduce((s,t)=>t.jenis!=='tarik'?s+t.nominal:s-t.nominal,0);
   }
 
   // Grup per tanggal
@@ -3733,17 +4254,19 @@ function renderRekKoran(){
 
   const tabelRows=Object.keys(grupHari).sort().map(tgl=>{
     const baris=grupHari[tgl];
-    const setorHari=baris.reduce((s,b)=>s+b.setor,0);
+    const setorSiswaHari=baris.reduce((s,b)=>s+b.setorSiswa,0);
+    const setorWaliHari=baris.reduce((s,b)=>s+b.setorWali,0);
     const tarikHari=baris.reduce((s,b)=>s+b.tarik,0);
-    saldoBerjalan+=setorHari-tarikHari;
+    saldoBerjalan+=setorSiswaHari-tarikHari;
     const tglFmt=new Date(tgl+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short'});
     const ketList=[...new Set(baris.map(b=>b.ket))].filter(Boolean).slice(0,2).join(', ')||'-';
     return`<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:7px 8px;font-size:11px;white-space:nowrap;color:var(--text-muted)">${tglFmt}</td>
       <td style="padding:7px 8px;font-size:11px;color:var(--text)">${ketList}</td>
-      <td style="padding:7px 8px;font-size:11px;text-align:right;color:var(--green);font-weight:600">${setorHari?fmtRp(setorHari):'-'}</td>
-      <td style="padding:7px 8px;font-size:11px;text-align:right;color:var(--red);font-weight:600">${tarikHari?fmtRp(tarikHari):'-'}</td>
-      <td style="padding:7px 8px;font-size:11px;text-align:right;font-weight:700;color:var(--text)">${fmtRp(saldoBerjalan)}</td>
+      <td style="padding:7px 8px;font-size:11px;text-align:right;color:var(--green);font-weight:600;white-space:nowrap">${setorSiswaHari?fmtRp(setorSiswaHari):'-'}</td>
+      <td style="padding:7px 8px;font-size:11px;text-align:right;color:var(--blue);font-weight:600;white-space:nowrap">${setorWaliHari?fmtRp(setorWaliHari):'-'}</td>
+      <td style="padding:7px 8px;font-size:11px;text-align:right;color:var(--red);font-weight:600;white-space:nowrap">${tarikHari?fmtRp(tarikHari):'-'}</td>
+      <td style="padding:7px 8px;font-size:11px;text-align:right;font-weight:700;color:var(--text);white-space:nowrap">${fmtRp(saldoBerjalan)}</td>
     </tr>`;
   }).join('');
 
@@ -3752,29 +4275,40 @@ function renderRekKoran(){
       <i class="fas fa-school"></i>
       <div><b>${k.nama}</b> · Wali: ${k.wali||'-'}<br><span style="font-size:11px">${periodeLabel}</span></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 12px 12px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 12px 8px">
       <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center">
-        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Total Setor</div>
-        <div style="font-size:13px;font-weight:800;color:var(--green)">${fmtRp(totalSetor)}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Setor Siswa</div>
+        <div style="font-size:13px;font-weight:800;color:var(--green)">${fmtRp(totalSetorSiswa)}</div>
       </div>
       <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center">
-        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Total Tarik</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Setor Wali Kelas</div>
+        <div style="font-size:13px;font-weight:800;color:var(--blue)">${fmtRp(totalSetorWali)}</div>
+      </div>
+      <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Tarik</div>
         <div style="font-size:13px;font-weight:800;color:var(--red)">${fmtRp(totalTarik)}</div>
       </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 12px 12px">
       <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center">
-        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Saldo Kelas</div>
-        <div style="font-size:13px;font-weight:800;color:var(--pink)">${fmtRp(totalSaldo)}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Saldo Tabungan Siswa</div>
+        <div style="font-size:13px;font-weight:800;color:var(--pink)">${fmtRp(saldoTabunganSiswa)}</div>
+      </div>
+      <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">Belum Disetor ke Bendahara</div>
+        <div style="font-size:13px;font-weight:800;color:var(--amber)">${fmtRp(belumDisetor)}</div>
       </div>
     </div>
     <div class="card" style="margin:0 12px 12px">
       <div style="padding:10px 12px 6px;font-size:12px;font-weight:700;color:var(--text-muted);border-bottom:1px solid var(--border)">REKENING KORAN KELAS</div>
       <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse">
+        <table style="width:100%;border-collapse:collapse;min-width:560px">
           <thead>
             <tr style="background:var(--surface)">
               <th style="padding:7px 8px;font-size:10px;text-align:left;color:var(--text-muted);font-weight:600">TGL</th>
               <th style="padding:7px 8px;font-size:10px;text-align:left;color:var(--text-muted);font-weight:600">KET</th>
-              <th style="padding:7px 8px;font-size:10px;text-align:right;color:var(--green);font-weight:600">SETOR</th>
+              <th style="padding:7px 8px;font-size:10px;text-align:right;color:var(--green);font-weight:600">SETOR SISWA</th>
+              <th style="padding:7px 8px;font-size:10px;text-align:right;color:var(--blue);font-weight:600">SETOR WALI KELAS</th>
               <th style="padding:7px 8px;font-size:10px;text-align:right;color:var(--red);font-weight:600">TARIK</th>
               <th style="padding:7px 8px;font-size:10px;text-align:right;color:var(--text-muted);font-weight:600">SALDO</th>
             </tr>
@@ -3783,14 +4317,203 @@ function renderRekKoran(){
           <tfoot>
             <tr style="background:var(--surface);border-top:2px solid var(--border)">
               <td colspan="2" style="padding:8px;font-size:11px;font-weight:700;color:var(--text)">TOTAL</td>
-              <td style="padding:8px;font-size:11px;font-weight:800;text-align:right;color:var(--green)">${fmtRp(totalSetor)}</td>
+              <td style="padding:8px;font-size:11px;font-weight:800;text-align:right;color:var(--green)">${fmtRp(totalSetorSiswa)}</td>
+              <td style="padding:8px;font-size:11px;font-weight:800;text-align:right;color:var(--blue)">${fmtRp(totalSetorWali)}</td>
               <td style="padding:8px;font-size:11px;font-weight:800;text-align:right;color:var(--red)">${fmtRp(totalTarik)}</td>
-              <td style="padding:8px;font-size:11px;font-weight:800;text-align:right;color:var(--pink)">${fmtRp(totalSaldo)}</td>
+              <td style="padding:8px;font-size:11px;font-weight:800;text-align:right;color:var(--pink)">${fmtRp(saldoTabunganSiswa)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
     </div>`;
+}
+
+// ===================== REKENING KORAN - CETAK/EXPORT =====================
+function _buildRekKoranData(){
+  const kId=$('rk-filter-kelas')?.value,bulan=$('rk-filter-bulan')?.value;
+  if(!kId)return null;
+  const k=getKelas(kId);
+  const siswaKelas=state.siswa.filter(s=>s.kelasId===kId);
+  const siswaIds=new Set(siswaKelas.map(s=>s.id));
+  let trxSiswa=state.transaksi.filter(t=>siswaIds.has(t.siswaId));
+  let skKelas=(state.setoranKelas||[]).filter(sk=>sk.kelasId===kId);
+  if(bulan){
+    trxSiswa=trxSiswa.filter(t=>t.tanggal.startsWith(bulan));
+    skKelas=skKelas.filter(sk=>sk.tanggal.startsWith(bulan));
+  }
+  let allBaris=[
+    ...trxSiswa.map(t=>({tanggal:t.tanggal,ket:t.ket||t.keterangan||t.jenis,setorSiswa:t.jenis!=='tarik'?t.nominal:0,setorWali:0,tarik:t.jenis==='tarik'?t.nominal:0,createdAt:t.createdAt||0})),
+    ...skKelas.map(sk=>({tanggal:sk.tanggal,ket:sk.ket||'Setoran Kelas',setorSiswa:0,setorWali:sk.nominal,tarik:0,createdAt:sk.createdAt||0}))
+  ];
+  allBaris.sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.createdAt-b.createdAt);
+
+  const totalSetorSiswa=allBaris.reduce((s,b)=>s+b.setorSiswa,0);
+  const totalSetorWali=allBaris.reduce((s,b)=>s+b.setorWali,0);
+  const totalTarik=allBaris.reduce((s,b)=>s+b.tarik,0);
+  const saldoTabunganSiswa=totalSetorSiswa-totalTarik;
+  const belumDisetor=bulan?Math.max(0,saldoTabunganSiswa-totalSetorWali):getBelumDisetorKelas(kId);
+  const periodeLabel=bulan?new Date(bulan+'-02').toLocaleDateString('id-ID',{month:'long',year:'numeric'}):'Semua Periode';
+
+  let saldoBerjalan=0;
+  if(bulan){
+    const trxSiswaSebelum=state.transaksi.filter(t=>siswaIds.has(t.siswaId)&&t.tanggal<bulan+'-01');
+    saldoBerjalan=trxSiswaSebelum.reduce((s,t)=>t.jenis!=='tarik'?s+t.nominal:s-t.nominal,0);
+  }
+
+  const grupHari={};
+  allBaris.forEach(b=>{
+    if(!grupHari[b.tanggal])grupHari[b.tanggal]=[];
+    grupHari[b.tanggal].push(b);
+  });
+
+  const rows=Object.keys(grupHari).sort().map(tgl=>{
+    const baris=grupHari[tgl];
+    const setorSiswaHari=baris.reduce((s,b)=>s+b.setorSiswa,0);
+    const setorWaliHari=baris.reduce((s,b)=>s+b.setorWali,0);
+    const tarikHari=baris.reduce((s,b)=>s+b.tarik,0);
+    saldoBerjalan+=setorSiswaHari-tarikHari;
+    const ketList=[...new Set(baris.map(b=>b.ket))].filter(Boolean).slice(0,2).join(', ')||'-';
+    return{tglRaw:tgl,ketList,setorSiswaHari,setorWaliHari,tarikHari,saldoBerjalan};
+  });
+
+  return{kId,k,bulan,periodeLabel,totalSetorSiswa,totalSetorWali,totalTarik,saldoTabunganSiswa,belumDisetor,rows};
+}
+function _rekKoranPrintHTML(d){
+  const s=state.settings;
+  const trRows=d.rows.map((r,i)=>`<tr>
+    <td class="center">${i+1}</td>
+    <td>${fmtDatePrint(r.tglRaw)}</td>
+    <td>${r.ketList}</td>
+    <td class="right" style="color:#16a34a">${r.setorSiswaHari?fmtRpPrint(r.setorSiswaHari):'-'}</td>
+    <td class="right" style="color:#2563eb">${r.setorWaliHari?fmtRpPrint(r.setorWaliHari):'-'}</td>
+    <td class="right" style="color:#dc2626">${r.tarikHari?fmtRpPrint(r.tarikHari):'-'}</td>
+    <td class="right" style="font-weight:700">${fmtRpPrint(r.saldoBerjalan)}</td>
+  </tr>`).join('');
+  return`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rekening Koran Kelas</title>
+  <style>${getPrintStyles()}</style></head><body>
+  <div class="kop">
+    <div class="kop-stripe"></div>
+    <div class="kop-text">
+      <div class="kop-label">Rekening Koran Kelas</div>
+      <div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div>
+      <div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div>
+    </div>
+  </div>
+  <div class="info-grid" style="margin-bottom:10px">
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Kelas</div><div class="info-val">${d.k.nama} · Wali: ${d.k.wali||'-'}</div></div>
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Periode</div><div class="info-val">${d.periodeLabel}</div></div>
+  </div>
+  <div class="summary-bar">
+    <div class="summary-card sc-green"><div class="sc-label">Setor Siswa</div><div class="sc-val">${fmtRpPrint(d.totalSetorSiswa)}</div></div>
+    <div class="summary-card" style="background:#dbeafe;border:1px solid #93c5fd"><div class="sc-label">Setor Wali Kelas</div><div class="sc-val" style="color:#2563eb">${fmtRpPrint(d.totalSetorWali)}</div></div>
+    <div class="summary-card sc-red"><div class="sc-label">Tarik</div><div class="sc-val">${fmtRpPrint(d.totalTarik)}</div></div>
+    <div class="summary-card sc-purple"><div class="sc-label">Saldo Tabungan Siswa</div><div class="sc-val">${fmtRpPrint(d.saldoTabunganSiswa)}</div></div>
+  </div>
+  <table>
+    <thead><tr><th class="center">No</th><th>Tanggal</th><th>Keterangan</th><th class="right">Setor Siswa</th><th class="right">Setor Wali Kelas</th><th class="right">Tarik</th><th class="right">Saldo</th></tr></thead>
+    <tbody>${trRows||'<tr><td colspan="7" class="center" style="color:#94a3b8;padding:20px">Belum ada transaksi pada periode ini</td></tr>'}</tbody>
+    <tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(d.totalSetorSiswa)}</td><td class="right">${fmtRpPrint(d.totalSetorWali)}</td><td class="right" style="color:#f87171">${fmtRpPrint(d.totalTarik)}</td><td class="right">${fmtRpPrint(d.saldoTabunganSiswa)}</td></tr>
+  </table>
+  <div class="ttd-row" style="justify-content:flex-end">
+    <div class="ttd-box"><div class="ttd-title">Wali Kelas</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-WALI|'+(d.k.wali||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${d.k.wali||'(................................)'}</div></div>
+  </div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+}
+function cetakRekKoran(){
+  const d=_buildRekKoranData();
+  if(!d){toast('Pilih kelas terlebih dahulu','error');return;}
+  openPrintBlob(_rekKoranPrintHTML(d));
+}
+function exportPNGRekKoran(){
+  const d=_buildRekKoranData();
+  if(!d){toast('Pilih kelas terlebih dahulu','error');return;}
+  let html=_rekKoranPrintHTML(d);
+  html=html.replace('<script>window.onload=function(){window.print();}<\/script>','');
+  exportHTMLasPNG(html,'rekening-koran-'+d.k.nama.replace(/\s+/g,'-').toLowerCase());
+}
+function exportExcelRekKoran(){
+  if(typeof XLSX==='undefined'){toast('Modul Excel belum siap, coba lagi sebentar','error');return;}
+  const d=_buildRekKoranData();
+  if(!d){toast('Pilih kelas terlebih dahulu','error');return;}
+  if(!d.rows.length){toast('Tidak ada data pada periode ini','error');return;}
+  const s=state.settings;
+  const totalCols=7;
+  const headerRowIdx=4;
+  const dataStartIdx=headerRowIdx+1;
+  const totalRowIdx=dataStartIdx+d.rows.length;
+
+  const aoa=[];
+  aoa.push([s.namaSekolah||'Nama Sekolah']);
+  aoa.push(['REKENING KORAN KELAS']);
+  aoa.push([`Kelas: ${d.k.nama} · Wali: ${d.k.wali||'-'}  ·  Periode: ${d.periodeLabel}`]);
+  aoa.push([]);
+  aoa.push(['NO','TANGGAL','KETERANGAN','SETOR SISWA','SETOR WALI KELAS','TARIK','SALDO']);
+  d.rows.forEach((r,i)=>aoa.push([i+1,fmtDate(r.tglRaw),r.ketList,r.setorSiswaHari,r.setorWaliHari,r.tarikHari,r.saldoBerjalan]));
+  aoa.push(['','','JUMLAH',d.totalSetorSiswa,d.totalSetorWali,d.totalTarik,d.saldoTabunganSiswa]);
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:totalCols-1}},
+    {s:{r:1,c:0},e:{r:1,c:totalCols-1}},
+    {s:{r:2,c:0},e:{r:2,c:totalCols-1}}
+  ];
+  ws['!cols']=[{wch:5},{wch:12},{wch:26},{wch:14},{wch:16},{wch:14},{wch:14}];
+  ws['!rows']=[{hpt:20},{hpt:18},{hpt:14},{hpt:6},{hpt:22}];
+
+  const thin={style:'thin',color:{rgb:'94A3B8'}};
+  const borderAll={top:thin,bottom:thin,left:thin,right:thin};
+  const numFmt='#,##0;-#,##0;"-"';
+  const setCellStyle=(r,c,style)=>{
+    const ref=XLSX.utils.encode_cell({r,c});
+    if(!ws[ref])ws[ref]={t:'s',v:''};
+    ws[ref].s=style;
+  };
+  setCellStyle(0,0,{font:{bold:true,sz:13,color:{rgb:'DB2777'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(1,0,{font:{bold:true,sz:11,color:{rgb:'1E293B'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(2,0,{font:{sz:9,color:{rgb:'64748B'}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<totalCols;c++){
+    setCellStyle(headerRowIdx,c,{
+      font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+      fill:{fgColor:{rgb:'DB2777'}},
+      alignment:{horizontal:'center',vertical:'center',wrapText:true},
+      border:borderAll
+    });
+  }
+  for(let i=0;i<d.rows.length;i++){
+    const r=dataStartIdx+i;
+    const zebra=i%2===0?'FFFFFF':'FDF2F8';
+    for(let c=0;c<totalCols;c++){
+      const isText=c===2;
+      setCellStyle(r,c,{
+        font:{sz:9,color:{rgb:'1E293B'}},
+        fill:{fgColor:{rgb:zebra}},
+        alignment:{horizontal:isText?'left':'center',vertical:'center'},
+        border:borderAll,
+        numFmt:(c>=3&&c<=6)?numFmt:undefined
+      });
+    }
+  }
+  for(let c=0;c<totalCols;c++){
+    setCellStyle(totalRowIdx,c,{
+      font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+      fill:{fgColor:{rgb:'1E293B'}},
+      alignment:{horizontal:c===2?'right':'center',vertical:'center'},
+      border:borderAll,
+      numFmt:(c>=3&&c<=6)?numFmt:undefined
+    });
+  }
+
+  ws['!pageSetup']={paperSize:9,orientation:'landscape',fitToWidth:1,fitToHeight:0,horizontalDpi:300,verticalDpi:300};
+  ws['!margins']={left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2};
+  ws['!printOptions']={gridLines:false};
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Rek Koran');
+  const fname='Rekening-Koran-'+d.k.nama.replace(/\s+/g,'-')+'-'+(d.bulan||'semua')+'.xlsx';
+  XLSX.writeFile(wb,fname);
+  toast('Excel berhasil diunduh!','success');
 }
 
 // ===================== RENDER CURRENT VIEW =====================
@@ -3940,9 +4663,53 @@ function restoreData(input){
   reader.onload=e=>{try{state=JSON.parse(e.target.result);saveData();loadSettings();renderView(currentView);toast('Data berhasil dipulihkan!','success');}catch{toast('File tidak valid!','error');}};
   reader.readAsText(file);input.value='';
 }
+// ===================== KELOLA & HAPUS DATA TERPUSAT =====================
+// Helper konfirmasi: user wajib ketik "HAPUS" persis sebelum tombol aktif, untuk aksi hapus permanen berskala besar
+function confirmHapusData({title,text,onConfirm}){
+  Swal.fire({
+    title,
+    html:`<div style="font-size:12.5px;color:var(--text2);margin-bottom:12px;text-align:left;line-height:1.5">${text}</div><div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-align:left">Ketik <b style="color:var(--red)">HAPUS</b> untuk konfirmasi:</div><input id="konfirmasi-hapus-input" class="swal2-input" placeholder="HAPUS" style="text-align:center;text-transform:uppercase;margin:0">`,
+    icon:'warning',showCancelButton:true,confirmButtonText:'Hapus Permanen',cancelButtonText:'Batal',
+    background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#dc2626',focusConfirm:false,
+    preConfirm:()=>{
+      const val=(document.getElementById('konfirmasi-hapus-input').value||'').trim().toUpperCase();
+      if(val!=='HAPUS'){Swal.showValidationMessage('Ketik "HAPUS" persis untuk melanjutkan');return false;}
+      return true;
+    }
+  }).then(r=>{if(r.isConfirmed)onConfirm();});
+}
+function hapusKategoriTransaksi(){
+  const jml=(state.transaksi||[]).length;
+  if(!jml){toast('Belum ada transaksi tabungan','info');return;}
+  confirmHapusData({
+    title:'Hapus Semua Transaksi Tabungan?',
+    text:`<b>${jml} transaksi</b> setor & tarik tabungan siswa akan dihapus permanen. Data siswa dan kelas tidak terpengaruh.`,
+    onConfirm:()=>{state.transaksi=[];saveData();populateSelects();renderView(currentView);toast('Semua transaksi tabungan dihapus!','success');}
+  });
+}
+function hapusKategoriSiswaKelas(){
+  const jmlSiswa=(state.siswa||[]).length,jmlKelas=(state.kelas||[]).length;
+  if(!jmlSiswa&&!jmlKelas){toast('Belum ada data siswa & kelas','info');return;}
+  confirmHapusData({
+    title:'Hapus Semua Siswa & Kelas?',
+    text:`<b>${jmlKelas} kelas</b> dan <b>${jmlSiswa} siswa</b> beserta seluruh transaksi tabungannya akan dihapus permanen.`,
+    onConfirm:()=>{state.kelas=[];state.siswa=[];state.transaksi=[];saveData();populateSelects();renderView(currentView);toast('Semua data siswa & kelas dihapus!','success');}
+  });
+}
+function hapusKategoriPinjaman(){
+  const jml=(state.pinjaman||[]).length;
+  if(!jml){toast('Belum ada data pinjaman','info');return;}
+  confirmHapusData({
+    title:'Hapus Semua Data Pinjaman?',
+    text:`<b>${jml} data pinjaman</b> beserta riwayat pembayarannya akan dihapus permanen.`,
+    onConfirm:()=>{state.pinjaman=[];saveData();populateSelects();renderView(currentView);toast('Semua data pinjaman dihapus!','success');}
+  });
+}
 function resetAllData(){
-  Swal.fire({title:'Reset Semua Data?',text:'Semua data tabungan dan kelas akan dihapus permanen!',icon:'warning',showCancelButton:true,confirmButtonText:'Ya, Reset!',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#dc2626'}).then(r=>{
-    if(r.isConfirmed){const settings=state.settings,guru=state.guru||[],serahTerima=state.serahTerima||[];state={settings,kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru,serahTerima};saveData();renderView(currentView);toast('Data telah direset!','success');}
+  confirmHapusData({
+    title:'Reset Semua Data?',
+    text:'Semua data <b>tabungan, kelas, siswa, kas, dan pinjaman</b> akan dihapus permanen. Pengaturan, kontak guru, dan riwayat serah terima tetap tersimpan.',
+    onConfirm:()=>{const settings=state.settings,guru=state.guru||[],serahTerima=state.serahTerima||[];state={settings,kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru,serahTerima};saveData();renderView(currentView);toast('Data telah direset!','success');}
   });
 }
 
@@ -3961,6 +4728,12 @@ if('serviceWorker' in navigator){
     });
   });
 }
+
+// Peringatan saat user mencoba menutup/refresh tab atau keluar aplikasi
+window.addEventListener('beforeunload',function(e){
+  e.preventDefault();
+  e.returnValue='';
+});
 
 document.addEventListener('DOMContentLoaded',()=>{
   // Push dummy state so back button doesn't exit app
@@ -4015,6 +4788,69 @@ function deleteGuru(idx){
   Swal.fire({title:'Hapus Kontak?',text:'Kontak guru akan dihapus.',icon:'warning',showCancelButton:true,confirmButtonText:'Hapus',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#dc2626'}).then(r=>{
     if(r.isConfirmed){state.guru.splice(idx,1);saveData();renderGuruList();toast('Kontak dihapus!','success');}
   });
+}
+
+// ===================== DATA WALI KELAS & GURU =====================
+function renderDataGuru(){
+  const el=$('dataguru-list-card');if(!el)return;
+  if(!state.dataGuru)state.dataGuru=[];
+  const q=($('dg-search')?.value||'').toLowerCase();
+  const list=[...state.dataGuru].filter(g=>!q||(g.nama||'').toLowerCase().includes(q)||(g.mapel||'').toLowerCase().includes(q)||(g.jabatan||'').toLowerCase().includes(q)).sort((a,b)=>(a.nama||'').localeCompare(b.nama||''));
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">👩‍🏫</div><p>Belum ada data guru. Tambahkan di atas.</p></div>';return;}
+  el.innerHTML=list.map(g=>`
+    <div class="kelas-card">
+      <div class="kelas-avatar">${g.nama?.charAt(0)||'?'}</div>
+      <div class="kelas-info">
+        <div class="kelas-name">${g.nama||'-'}</div>
+        <div class="kelas-sub">${g.jabatan||'-'}${g.mapel?' · '+g.mapel:''}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${g.nip?'NIP: '+g.nip+' · ':''}${g.noHp?'HP: '+g.noHp:'-'}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button class="btn btn-warning btn-xs btn-icon" onclick="editDataGuru('${g.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-danger btn-xs btn-icon" onclick="deleteDataGuru('${g.id}')" title="Hapus"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+function openDataGuruSheet(){
+  $('dg-edit-id').value='';$('dg-nama').value='';$('dg-jabatan').value='';$('dg-mapel').value='';$('dg-nip').value='';$('dg-nohp').value='';$('dg-ket').value='';
+  $('dg-sheet-title').innerHTML='<i class="fas fa-chalkboard-teacher" style="color:var(--purple)"></i> Tambah Guru';
+  openSheet('sheet-data-guru');
+}
+function editDataGuru(id){
+  const g=state.dataGuru.find(x=>x.id===id);if(!g)return;
+  $('dg-edit-id').value=g.id;$('dg-nama').value=g.nama||'';$('dg-jabatan').value=g.jabatan||'';$('dg-mapel').value=g.mapel||'';$('dg-nip').value=g.nip||'';$('dg-nohp').value=g.noHp||'';$('dg-ket').value=g.ket||'';
+  $('dg-sheet-title').innerHTML='<i class="fas fa-edit" style="color:var(--amber)"></i> Edit Guru';
+  openSheet('sheet-data-guru');
+}
+function saveDataGuru(){
+  const editId=$('dg-edit-id').value,nama=$('dg-nama').value.trim(),jabatan=$('dg-jabatan').value.trim(),mapel=$('dg-mapel').value.trim(),nip=$('dg-nip').value.trim(),noHp=$('dg-nohp').value.trim(),ket=$('dg-ket').value.trim();
+  if(!nama){toast('Masukkan nama guru!','error');return;}
+  if(!state.dataGuru)state.dataGuru=[];
+  if(editId){
+    const idx=state.dataGuru.findIndex(x=>x.id===editId);
+    if(idx>-1)state.dataGuru[idx]={...state.dataGuru[idx],nama,jabatan,mapel,nip,noHp,ket};
+  }else{
+    state.dataGuru.push({id:genId(),nama,jabatan,mapel,nip,noHp,ket,createdAt:Date.now()});
+  }
+  saveData();closeSheet('sheet-data-guru');renderDataGuru();toast(editId?'Data guru diperbarui!':'Data guru ditambahkan!','success');
+}
+function deleteDataGuru(id){
+  const g=state.dataGuru.find(x=>x.id===id);if(!g)return;
+  Swal.fire({title:'Hapus Data Guru?',html:`Hapus data <b>${g.nama}</b>?`,icon:'warning',showCancelButton:true,confirmButtonText:'Hapus',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#dc2626'}).then(r=>{
+    if(r.isConfirmed){state.dataGuru=state.dataGuru.filter(x=>x.id!==id);saveData();renderDataGuru();toast('Data guru dihapus!','success');}
+  });
+}
+// Sinkron pilihan Data Guru ke form Pinjaman
+function renderPjGuruOptions(){
+  const sel=$('pj-guru-pilih');if(!sel)return;
+  if(!state.dataGuru)state.dataGuru=[];
+  sel.innerHTML='<option value="">— Pilih dari Data Guru (opsional) —</option>'+[...state.dataGuru].sort((a,b)=>(a.nama||'').localeCompare(b.nama||'')).map(g=>`<option value="${g.id}">${g.nama}</option>`).join('');
+}
+function pilihGuruUntukPinjaman(){
+  const sel=$('pj-guru-pilih');if(!sel||!sel.value)return;
+  const g=state.dataGuru.find(x=>x.id===sel.value);if(!g)return;
+  $('pj-nama').value=g.nama||'';
+  $('pj-jabatan').value=g.jabatan||'';
 }
 
 // ===================== EXPORT PNG =====================
@@ -4998,32 +5834,32 @@ function buildPengambilanHTML(d){
     body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#fff;color:#1e293b;font-size:10pt;}
     @page{size:215mm 330mm;margin:10mm 13mm;}
     p,div{text-align:justify;text-justify:inter-word;}
-    .kop{display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:3px solid #059669;margin-bottom:10px;}
-    .kop-stripe{width:5px;height:52px;background:linear-gradient(180deg,#059669,#34d399);border-radius:4px;flex-shrink:0;}
+    .kop{display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:3px solid #db2777;margin-bottom:10px;}
+    .kop-stripe{width:5px;height:52px;background:linear-gradient(180deg,#db2777,#e879a3);border-radius:4px;flex-shrink:0;}
     .kop-text{flex:1;}
-    .kop-label{font-size:6.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#059669;margin-bottom:1px;}
+    .kop-label{font-size:6.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#db2777;margin-bottom:1px;}
     .kop-judul{font-size:13pt;font-weight:900;color:#1e293b;line-height:1.1;}
     .kop-sub{font-size:7.5pt;color:#64748b;margin-top:2px;}
     .doc-title{text-align:center;margin:10px 0 4px;}
     .doc-title .judul{font-size:13pt;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:.07em;}
     .doc-title .subjudul{font-size:8.5pt;color:#64748b;margin-top:2px;}
-    .doc-nomor{text-align:center;font-size:8pt;color:#059669;font-weight:700;margin-bottom:8px;border-bottom:1px dashed #e2e8f0;padding-bottom:6px;}
+    .doc-nomor{text-align:center;font-size:8pt;color:#db2777;font-weight:700;margin-bottom:8px;border-bottom:1px dashed #e2e8f0;padding-bottom:6px;}
     .intro{font-size:9.5pt;line-height:1.7;color:#1e293b;margin-bottom:10px;text-align:justify;}
-    .data-box{background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:10px 14px;margin-bottom:10px;}
-    .data-box-title{font-size:7pt;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#15803d;margin-bottom:8px;}
+    .data-box{background:#fdf2f8;border:1px solid #fbcfe8;border-radius:7px;padding:10px 14px;margin-bottom:10px;}
+    .data-box-title{font-size:7pt;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#9d174d;margin-bottom:8px;}
     .data-row{display:flex;gap:4px;margin-bottom:5px;align-items:flex-start;font-size:9pt;}
     .data-row:last-child{margin-bottom:0;}
-    .data-label{min-width:165px;font-weight:700;color:#166534;font-size:8.5pt;}
+    .data-label{min-width:165px;font-weight:700;color:#9d174d;font-size:8.5pt;}
     .data-val{font-weight:700;color:#1e293b;}
-    .nominal-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #86efac;border-radius:8px;padding:10px 14px;margin:10px 0;text-align:center;}
-    .nominal-label{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#15803d;margin-bottom:3px;}
-    .nominal-val{font-size:20pt;font-weight:900;color:#059669;font-family:monospace;}
+    .nominal-box{background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:2px solid #f9a8d4;border-radius:8px;padding:10px 14px;margin:10px 0;text-align:center;}
+    .nominal-label{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#9d174d;margin-bottom:3px;}
+    .nominal-val{font-size:20pt;font-weight:900;color:#db2777;font-family:monospace;}
     .nominal-terbilang{font-size:8.5pt;font-style:italic;color:#64748b;margin-top:4px;}
     .saldo-row{display:flex;gap:10px;margin:8px 0;font-size:8.5pt;}
     .saldo-item{flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;text-align:center;}
     .saldo-item-label{font-size:7pt;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:3px;}
     .saldo-item-val{font-weight:900;font-family:monospace;}
-    .pernyataan{font-size:9.5pt;line-height:1.7;color:#1e293b;border-left:3px solid #059669;background:#f0fdf4;border-radius:0 6px 6px 0;padding:9px 12px;margin:10px 0;text-align:justify;}
+    .pernyataan{font-size:9.5pt;line-height:1.7;color:#1e293b;border-left:3px solid #db2777;background:#fdf2f8;border-radius:0 6px 6px 0;padding:9px 12px;margin:10px 0;text-align:justify;}
     .ttd-section{margin-top:18px;}
     .ttd-title-bar{font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#64748b;text-align:center;margin-bottom:8px;border-bottom:1px dashed #e2e8f0;padding-bottom:5px;}
     .ttd-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:6px;}
