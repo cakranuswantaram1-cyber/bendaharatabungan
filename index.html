@@ -517,6 +517,11 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
             <select class="form-input" id="mut-jenis" onchange="renderMutasi()" style="font-size:12px;padding:9px"><option value="">Semua Jenis</option><option value="setor">Setor Tabungan</option><option value="tarik">Tarik Tabungan</option><option value="kas">Kas Bendahara</option></select>
           </div>
         </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button class="btn btn-warning btn-xs" onclick="cetakMutasi()"><i class="fas fa-print"></i> Cetak PDF</button>
+          <button class="btn btn-ghost btn-xs" onclick="exportPNGMutasi()"><i class="fas fa-image"></i> PNG</button>
+          <button class="btn btn-success btn-xs" onclick="exportExcelMutasi()"><i class="fas fa-file-excel"></i> Excel</button>
+        </div>
         <div id="mutasi-summary-box" style="margin-bottom:12px"></div>
         <div class="card"><div id="mutasi-list"></div></div>
       </div>
@@ -569,8 +574,10 @@ select.filter-select{flex-shrink:0;background:var(--surface2);border:1.5px solid
           <div class="form-group"><label class="form-label">Semester</label><select id="set-semester" class="form-input"><option value="">Pilih Semester...</option><option value="Ganjil">Ganjil</option><option value="Genap">Genap</option></select></div>
           <div class="form-group"><label class="form-label">Nama Bank (Rekening Asisten Bendahara)</label><input type="text" id="set-nama-bank" class="form-input" placeholder="cth: BRI, BNI..."></div>
           <div class="form-group"><label class="form-label">No. Rekening Asisten Bendahara</label><input type="text" id="set-no-rek" class="form-input" placeholder="Nomor rekening (opsional)"></div>
+          <div class="form-group"><label class="form-label">Atas Nama Rekening Asisten Bendahara</label><input type="text" id="set-atas-nama" class="form-input" placeholder="Nama pemilik rekening..."></div>
           <div class="form-group"><label class="form-label">Nama Bank (Rekening Bendahara Utama)</label><input type="text" id="set-nama-bank2" class="form-input" placeholder="cth: BRI, BNI..."></div>
           <div class="form-group"><label class="form-label">No. Rekening Bendahara Utama</label><input type="text" id="set-no-rek2" class="form-input" placeholder="Nomor rekening (opsional)"></div>
+          <div class="form-group"><label class="form-label">Atas Nama Rekening Bendahara Utama</label><input type="text" id="set-atas-nama2" class="form-input" placeholder="Nama pemilik rekening..."></div>
           <button class="btn btn-primary btn-full" onclick="saveSettings()"><i class="fas fa-save"></i> Simpan Pengaturan</button>
         </div>
       </div>
@@ -958,6 +965,7 @@ Citra Dewi"></textarea>
     <div class="sheet-body">
       <input type="hidden" id="pj-edit-id">
       <input type="hidden" id="pj-sumber" value="bank">
+      <div class="info-box green" id="pj-saldo-box" style="margin-bottom:12px"><i class="fas fa-wallet"></i><span>Saldo yang dipegang Asisten Bendahara saat ini: <b id="pj-saldo-angka" style="font-family:monospace">Rp 0</b></span></div>
       <div class="form-group"><label class="form-label">Nama Guru/Staf</label><input type="text" id="pj-nama" class="form-input" placeholder="Nama..."></div>
       <div class="form-group"><label class="form-label">Jabatan</label><input type="text" id="pj-jabatan" class="form-input" placeholder="Wali kelas, dll (opsional)"></div>
       <div class="form-group">
@@ -968,7 +976,7 @@ Citra Dewi"></textarea>
         </div>
       </div>
       <div class="grid2">
-        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="pj-nominal" class="form-input" placeholder="0" inputmode="numeric" oninput="nomPreview(this)"></div>
+        <div class="form-group"><label class="form-label">Jumlah (Rp)</label><input type="number" id="pj-nominal" class="form-input" placeholder="0" inputmode="numeric" oninput="nomPreview(this);checkPjNominal()"></div>
         <div class="form-group"><label class="form-label">Tanggal Pinjam</label><input type="date" id="pj-tanggal" class="form-input"></div>
       </div>
       <div class="form-group"><label class="form-label">Jatuh Tempo (opsional)</label><input type="date" id="pj-jatuh-tempo" class="form-input"></div>
@@ -1049,7 +1057,7 @@ Citra Dewi"></textarea>
 </div>
 
 <script>
-let state={settings:{namaSekolah:'',npsn:'',alamat:'',kepalaSekolah:'',noWaKepala:'',bendahara:'',ta:'',semester:'',namaBank:'',noRek:'',namaBank2:'',noRek2:''},kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru:[]};
+let state={settings:{namaSekolah:'',npsn:'',alamat:'',kepalaSekolah:'',noWaKepala:'',bendahara:'',ta:'',semester:'',namaBank:'',noRek:'',atasNama:'',namaBank2:'',noRek2:'',atasNama2:''},kelas:[],siswa:[],transaksi:[],setoranKelas:[],pinjaman:[],kasTransaksi:[],guru:[]};
 let _waPendingPayload=null;
 let currentView='dashboard',currentTrxJenis='setor',distribusiTarget=null,currentMgmtTab='kelas',currentLapTab='mutasi',currentRekapTab='kelas',currentDetailSiswaId=null,dsCurrentKelasId=null;
 let tabSaldoKelasId=null;
@@ -1086,8 +1094,10 @@ function loadData(){
   if(!state.pengambilanTabungan)state.pengambilanTabungan=[];
   if(!state.settings.namaBank)state.settings.namaBank='';
   if(!state.settings.noRek)state.settings.noRek='';
+  if(!state.settings.atasNama)state.settings.atasNama='';
   if(!state.settings.namaBank2)state.settings.namaBank2='';
   if(!state.settings.noRek2)state.settings.noRek2='';
+  if(!state.settings.atasNama2)state.settings.atasNama2='';
   if(!state.settings.semester)state.settings.semester='';
   if(!state.settings.bendahara2)state.settings.bendahara2='';
   if(!state.settings.ttdMode)state.settings.ttdMode='qr';
@@ -1099,10 +1109,10 @@ function saveData(){localStorage.setItem('tabbend_v2',JSON.stringify(state));}
 
 function loadSettings(){
   const s=state.settings;
-  ['set-nama-sekolah','set-npsn','set-alamat','set-kepala-sekolah','set-nowa-kepala','set-bendahara','set-bendahara2','set-ttd-mode','set-ta','set-semester','set-nama-bank','set-no-rek','set-nama-bank2','set-no-rek2'].forEach(id=>{
+  ['set-nama-sekolah','set-npsn','set-alamat','set-kepala-sekolah','set-nowa-kepala','set-bendahara','set-bendahara2','set-ttd-mode','set-ta','set-semester','set-nama-bank','set-no-rek','set-atas-nama','set-nama-bank2','set-no-rek2','set-atas-nama2'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
-    const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek','set-nama-bank2':'namaBank2','set-no-rek2':'noRek2'};
+    const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek','set-atas-nama':'atasNama','set-nama-bank2':'namaBank2','set-no-rek2':'noRek2','set-atas-nama2':'atasNama2'};
     el.value=s[keys[id]]||(id==='set-ttd-mode'?'qr':'');
   });
   const hSub=document.getElementById('h-sekolah');
@@ -1114,13 +1124,13 @@ function loadSettings(){
 }
 
 function saveSettings(){
-  const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek','set-nama-bank2':'namaBank2','set-no-rek2':'noRek2'};
+  const keys={'set-nama-sekolah':'namaSekolah','set-npsn':'npsn','set-alamat':'alamat','set-kepala-sekolah':'kepalaSekolah','set-nowa-kepala':'noWaKepala','set-bendahara':'bendahara','set-bendahara2':'bendahara2','set-ttd-mode':'ttdMode','set-ta':'ta','set-semester':'semester','set-nama-bank':'namaBank','set-no-rek':'noRek','set-atas-nama':'atasNama','set-nama-bank2':'namaBank2','set-no-rek2':'noRek2','set-atas-nama2':'atasNama2'};
   Object.entries(keys).forEach(([id,key])=>{const el=document.getElementById(id);if(el)state.settings[key]=el.value;});
   saveData();loadSettings();toast('Pengaturan disimpan!','success');
 }
 
 function seedDemoData(){
-  state.settings={namaSekolah:'MTs Nurul Iman',npsn:'20234567',alamat:'Jl. Pendidikan No.1',kepalaSekolah:'Bapak Kepala, S.Pd',bendahara:'Ibu Sari Dewi, S.Pd',ta:'2024/2025',semester:'Ganjil',namaBank:'BRI',noRek:'1234-01-012345',namaBank2:'BRI',noRek2:'1234-02-098765'};
+  state.settings={namaSekolah:'MTs Nurul Iman',npsn:'20234567',alamat:'Jl. Pendidikan No.1',kepalaSekolah:'Bapak Kepala, S.Pd',bendahara:'Ibu Sari Dewi, S.Pd',ta:'2024/2025',semester:'Ganjil',namaBank:'BRI',noRek:'1234-01-012345',atasNama:'Ibu Sari Dewi, S.Pd',namaBank2:'BRI',noRek2:'1234-02-098765',atasNama2:'Ibu Sari Dewi, S.Pd'};
   state.kelas=[{id:'k1',nama:'VII A',wali:'Pak Ahmad'},{id:'k2',nama:'VII B',wali:'Bu Siti'},{id:'k3',nama:'VIII A',wali:'Pak Budi'}];
   if(!state.guru)state.guru=[];
   state.guru=[{nama:'Ibu Rina, S.Pd',noWa:'083456789012'},{nama:'Pak Dodi, M.Pd',noWa:'084567890123'}];
@@ -2332,6 +2342,7 @@ function _buildSerahanKelasHTML(skId){
     <tr><td>Tanggal Setor</td><td>: ${tanggalPanjang}</td></tr>
     <tr><td>Keterangan</td><td>: ${sk.ket||'-'}</td></tr>
     <tr><td>Cara Penyerahan</td><td>: <b style="color:${isBank?'#1d4ed8':'#15803d'}">${isBank?'Transfer Bank ('+( s.namaBank||'Bank')+')':'Uang Tunai'}</b></td></tr>
+    ${isBank?`<tr><td>Rekening Tujuan</td><td>: ${s.namaBank||'Bank'} ${s.noRek?'• '+s.noRek:''} a.n. ${s.atasNama||'-'}</td></tr>`:''}
     <tr><td>Tahun Ajaran</td><td>: ${s.ta||'-'} · Semester ${s.semester||'-'}</td></tr>
   </table>
   <div class="nominal-box" style="border-color:${isBank?'#93c5fd':'#86efac'};background:${isBank?'linear-gradient(135deg,#eff6ff,#dbeafe)':'linear-gradient(135deg,#f0fdf4,#dcfce7)'}">
@@ -2496,13 +2507,32 @@ function renderPinjamanList(){
 function openPinjamanSheet(){
   $('pj-edit-id').value='';$('pj-nama').value='';$('pj-jabatan').value='';$('pj-nominal').value='';$('pj-tanggal').value=todayStr();$('pj-jatuh-tempo').value='';$('pj-ket').value='';setPjSumber('bank');
   $('pinjaman-sheet-title').innerHTML=`<i class="fas fa-hand-holding-usd" style="color:var(--purple)"></i> Catat Pinjaman`;
+  $('pj-saldo-angka').textContent=fmtRp(getSaldoAsistenBendahara());
+  checkPjNominal();
   openSheet('sheet-pinjaman');
 }
 function editPinjaman(pjId){
   const p=getPinjaman(pjId);if(!p.id)return;
   $('pj-edit-id').value=p.id;$('pj-nama').value=p.nama;$('pj-jabatan').value=p.jabatan||'';$('pj-nominal').value=p.nominal;$('pj-tanggal').value=p.tanggal;$('pj-jatuh-tempo').value=p.jatuhTempo||'';$('pj-ket').value=p.ket||'';setPjSumber(p.sumberDana||'bank');
   $('pinjaman-sheet-title').innerHTML=`<i class="fas fa-edit" style="color:var(--amber)"></i> Edit Pinjaman`;
+  $('pj-saldo-angka').textContent=fmtRp(getSaldoAsistenBendahara());
+  checkPjNominal();
   openSheet('sheet-pinjaman');
+}
+function getPjSaldoTersedia(){
+  const editId=$('pj-edit-id').value;
+  const oldNominal=editId?(getPinjaman(editId).nominal||0):0;
+  return getSaldoAsistenBendahara()+oldNominal;
+}
+function checkPjNominal(){
+  const el=$('pj-nominal');if(!el)return;
+  const v=parseFloat(el.value)||0;
+  const tersedia=getPjSaldoTersedia();
+  const fg=el.closest('.form-group');
+  let warn=$('pj-nominal-warn');
+  if(!warn){warn=document.createElement('div');warn.id='pj-nominal-warn';warn.style.cssText='font-size:11px;font-weight:700;color:var(--red);margin-top:2px;';fg.appendChild(warn);}
+  if(v>tersedia&&v>0){warn.textContent='⛔ Melebihi saldo Asisten Bendahara ('+fmtRp(tersedia)+')';warn.style.display='block';}
+  else{warn.textContent='';warn.style.display='none';}
 }
 function setPjSumber(src){
   $('pj-sumber').value=src;
@@ -2514,6 +2544,8 @@ function savePinjaman(){
   if(!nama){toast('Masukkan nama!','error');return;}
   if(!nominal||nominal<=0){toast('Masukkan jumlah!','error');return;}
   if(!tanggal){toast('Masukkan tanggal!','error');return;}
+  const tersedia=getPjSaldoTersedia();
+  if(nominal>tersedia){toast('Melebihi saldo Asisten Bendahara! Saldo: '+fmtRp(tersedia),'error');return;}
   if(editId){
     const idx=state.pinjaman.findIndex(p=>p.id===editId);
     if(idx>-1){
@@ -2882,7 +2914,7 @@ function hapusSemuaKas(){
   });
 }
 function cetakKas(){
-  const s=state.settings,namaBank=s.namaBank||'Bank',noRek=s.noRek||'';
+  const s=state.settings,namaBank=s.namaBank||'Bank',noRek=s.noRek||'',atasNamaKas=s.atasNama||'';
   const allSorted=[...state.kasTransaksi].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.createdAt-b.createdAt);
   let rb=0,rt=0,totalMasuk=0,totalKeluar=0;
   const jLabel={setor_bank:`Setor ${namaBank}`,tarik_bank:`Tarik ${namaBank}`,masuk_tunai:'Masuk Tunai',keluar_tunai:'Keluar Tunai'};
@@ -2913,7 +2945,7 @@ function cetakKas(){
   </div>
   <div class="info-grid" style="margin-bottom:10px">
     <div class="info-box info-box-blue"><div class="info-label info-label-blue">Bendahara</div><div class="info-val">${s.bendahara||'-'}</div></div>
-    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Bank / No. Rek</div><div class="info-val">${namaBank}${noRek?' / '+noRek:''}</div></div>
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Bank / No. Rek</div><div class="info-val">${namaBank}${noRek?' / '+noRek:''}${atasNamaKas?' a.n. '+atasNamaKas:''}</div></div>
   </div>
   <div class="summary-bar">
     <div class="summary-card sc-green"><div class="sc-label">Total Masuk</div><div class="sc-val">${fmtRpPrint(totalMasuk)}</div></div>
@@ -3016,6 +3048,202 @@ function renderMutasi(){
       </div>
     </div>`;
   }).join('');
+}
+
+function _buildMutasiExportRows(){
+  const dari=$('mut-dari')?.value||'',sampai=$('mut-sampai')?.value||'9999-12-31',jF=$('mut-jenis')?.value||'';
+  const namaBank=state.settings.namaBank||'Bank';
+  const kasLabel={setor_bank:`Setor ${namaBank}`,tarik_bank:`Tarik ${namaBank}`,masuk_tunai:'Tunai Masuk',keluar_tunai:'Tunai Keluar'};
+  const kasLabelDetail=(k)=>{
+    if(k.pinjamanRole==='pokok') return `Pinjaman Keluar`;
+    if(k.pinjamanRole==='bayar') return `Cicilan Masuk`;
+    if(k.serahTerimaId) return `Pengambilan Tabungan`;
+    if(k.sumberSetoran) return `Setoran Kelas`;
+    return kasLabel[k.jenis]||k.jenis;
+  };
+  let itemsSiswa=state.transaksi.filter(t=>{
+    if(dari&&t.tanggal<dari)return false;
+    if(t.tanggal>sampai)return false;
+    if(jF&&jF!=='kas'&&t.jenis!==jF)return false;
+    if(jF==='kas')return false;
+    return true;
+  }).map(t=>({...t,_src:'siswa',_isIn:t.jenis!=='tarik'}));
+  let itemsKas=(state.kasTransaksi||[]).filter(k=>{
+    if(k.auto&&k.pasangan)return false;
+    if(dari&&k.tanggal<dari)return false;
+    if(k.tanggal>sampai)return false;
+    if(jF&&jF!=='kas')return false;
+    return true;
+  }).map(k=>({...k,_src:'kas',_isIn:k.jenis==='setor_bank'||k.jenis==='masuk_tunai'}));
+  let trxs=[...itemsSiswa,...itemsKas].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.createdAt-b.createdAt);
+  return trxs.map(t=>{
+    if(t._src==='kas'){
+      return {tanggal:t.tanggal,uraian:kasLabelDetail(t),kategori:'Kas',isIn:t._isIn,nominal:t.nominal,ket:t.ket||'-'};
+    }
+    const s=getSiswa(t.siswaId),k=getKelas(s.kelasId);
+    return {tanggal:t.tanggal,uraian:s.nama||'?',kategori:k.nama||'-',isIn:t._isIn,nominal:t.nominal,ket:t.ket||'-'};
+  });
+}
+function _mutasiFilterInfo(){
+  const dari=$('mut-dari')?.value||'',sampai=$('mut-sampai')?.value||'',jF=$('mut-jenis')?.value||'';
+  const jFLabel={'':'Semua Jenis',setor:'Setor Tabungan',tarik:'Tarik Tabungan',kas:'Kas Bendahara'}[jF]||'Semua Jenis';
+  const periodeTxt=(dari?fmtDatePrint(dari):'Awal')+' s.d. '+(sampai?fmtDatePrint(sampai):'Sekarang');
+  return {dari,sampai,jFLabel,periodeTxt};
+}
+function cetakMutasi(){
+  const rows=_buildMutasiExportRows();
+  const s=state.settings;
+  const {jFLabel,periodeTxt}=_mutasiFilterInfo();
+  let totalMasuk=0,totalKeluar=0;
+  const trRows=rows.map((r,i)=>{
+    if(r.isIn)totalMasuk+=r.nominal;else totalKeluar+=r.nominal;
+    return`<tr>
+      <td class="center">${i+1}</td>
+      <td>${fmtDatePrint(r.tanggal)}</td>
+      <td>${r.uraian} <span style="color:#94a3b8;font-size:7.5pt">(${r.kategori})</span></td>
+      <td class="right" style="color:#16a34a">${r.isIn?fmtRpPrint(r.nominal):'-'}</td>
+      <td class="right" style="color:#dc2626">${!r.isIn?fmtRpPrint(r.nominal):'-'}</td>
+      <td style="color:#64748b;font-size:8pt">${r.ket}</td>
+    </tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Laporan Mutasi</title>
+  <style>${getPrintStyles()}</style></head><body>
+  <div class="kop">
+    <div class="kop-stripe"></div>
+    <div class="kop-text">
+      <div class="kop-label">Laporan Mutasi</div>
+      <div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div>
+      <div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div>
+    </div>
+  </div>
+  <div class="info-grid" style="margin-bottom:10px">
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Periode</div><div class="info-val">${periodeTxt}</div></div>
+    <div class="info-box info-box-blue"><div class="info-label info-label-blue">Jenis</div><div class="info-val">${jFLabel}</div></div>
+  </div>
+  <div class="summary-bar">
+    <div class="summary-card sc-green"><div class="sc-label">Total Masuk</div><div class="sc-val">${fmtRpPrint(totalMasuk)}</div></div>
+    <div class="summary-card sc-red"><div class="sc-label">Total Keluar</div><div class="sc-val">${fmtRpPrint(totalKeluar)}</div></div>
+    <div class="summary-card sc-purple"><div class="sc-label">Transaksi</div><div class="sc-val">${rows.length}</div></div>
+  </div>
+  <table>
+    <thead><tr><th class="center">No</th><th>Tanggal</th><th>Uraian</th><th class="right">Masuk</th><th class="right">Keluar</th><th>Keterangan</th></tr></thead>
+    <tbody>${trRows||'<tr><td colspan="6" class="center" style="color:#94a3b8;padding:20px">Tidak ada mutasi pada periode ini</td></tr>'}</tbody>
+    <tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalMasuk)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalKeluar)}</td><td></td></tr>
+  </table>
+  <div class="ttd-row" style="justify-content:flex-end">
+    <div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div>
+  </div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+  openPrintBlob(html);
+}
+function exportPNGMutasi(){
+  const rows=_buildMutasiExportRows();
+  const s=state.settings;
+  const {jFLabel,periodeTxt}=_mutasiFilterInfo();
+  let totalMasuk=0,totalKeluar=0;
+  const trRows=rows.map((r,i)=>{
+    if(r.isIn)totalMasuk+=r.nominal;else totalKeluar+=r.nominal;
+    return`<tr><td class="center">${i+1}</td><td>${fmtDatePrint(r.tanggal)}</td><td>${r.uraian} <span style="color:#94a3b8;font-size:7.5pt">(${r.kategori})</span></td><td class="right" style="color:#16a34a">${r.isIn?fmtRpPrint(r.nominal):'-'}</td><td class="right" style="color:#dc2626">${!r.isIn?fmtRpPrint(r.nominal):'-'}</td><td style="color:#64748b;font-size:8pt">${r.ket}</td></tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Laporan Mutasi</title><style>${getPrintStyles()}</style></head><body>
+  <div class="kop"><div class="kop-stripe"></div><div class="kop-text"><div class="kop-label">Laporan Mutasi</div><div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div><div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div></div></div>
+  <div class="info-grid" style="margin-bottom:10px"><div class="info-box info-box-blue"><div class="info-label info-label-blue">Periode</div><div class="info-val">${periodeTxt}</div></div><div class="info-box info-box-blue"><div class="info-label info-label-blue">Jenis</div><div class="info-val">${jFLabel}</div></div></div>
+  <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Total Masuk</div><div class="sc-val">${fmtRpPrint(totalMasuk)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Keluar</div><div class="sc-val">${fmtRpPrint(totalKeluar)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Transaksi</div><div class="sc-val">${rows.length}</div></div></div>
+  <table><thead><tr><th class="center">No</th><th>Tanggal</th><th>Uraian</th><th class="right">Masuk</th><th class="right">Keluar</th><th>Keterangan</th></tr></thead><tbody>${trRows||'<tr><td colspan="6" class="center" style="color:#94a3b8;padding:20px">Tidak ada mutasi pada periode ini</td></tr>'}</tbody><tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalMasuk)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalKeluar)}</td><td></td></tr></table>
+  <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
+  <div class="footer"><span>Dicetak: ${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><span>TabBend · ${s.namaSekolah||'Sekolah'}</span></div>
+  </body></html>`;
+  exportHTMLasPNG(html,'laporan-mutasi');
+}
+function exportExcelMutasi(){
+  if(typeof XLSX==='undefined'){toast('Modul Excel belum siap, coba lagi sebentar','error');return;}
+  const rows=_buildMutasiExportRows();
+  if(!rows.length){toast('Tidak ada data mutasi pada periode ini','error');return;}
+  const s=state.settings;
+  const {dari,sampai,jFLabel,periodeTxt}=_mutasiFilterInfo();
+  let totalMasuk=0,totalKeluar=0;
+  const dataRows=rows.map((r,i)=>{
+    if(r.isIn)totalMasuk+=r.nominal;else totalKeluar+=r.nominal;
+    return [i+1,fmtDate(r.tanggal),r.uraian,r.kategori,r.isIn?r.nominal:0,!r.isIn?r.nominal:0,r.ket];
+  });
+
+  const totalCols=7;
+  const headerRowIdx=4;
+  const dataStartIdx=headerRowIdx+1;
+  const totalRowIdx=dataStartIdx+dataRows.length;
+
+  const aoa=[];
+  aoa.push([s.namaSekolah||'Nama Sekolah']);
+  aoa.push(['LAPORAN MUTASI']);
+  aoa.push([`Periode: ${periodeTxt}  ·  Jenis: ${jFLabel}`]);
+  aoa.push([]);
+  aoa.push(['NO','TANGGAL','URAIAN','KATEGORI','MASUK','KELUAR','KETERANGAN']);
+  dataRows.forEach(r=>aoa.push(r));
+  aoa.push(['','','','JUMLAH',totalMasuk,totalKeluar,'']);
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:totalCols-1}},
+    {s:{r:1,c:0},e:{r:1,c:totalCols-1}},
+    {s:{r:2,c:0},e:{r:2,c:totalCols-1}}
+  ];
+  ws['!cols']=[{wch:5},{wch:12},{wch:26},{wch:14},{wch:14},{wch:14},{wch:24}];
+  ws['!rows']=[{hpt:20},{hpt:18},{hpt:14},{hpt:6},{hpt:22}];
+
+  const thin={style:'thin',color:{rgb:'94A3B8'}};
+  const borderAll={top:thin,bottom:thin,left:thin,right:thin};
+  const numFmt='#,##0;-#,##0;"-"';
+  const setCellStyle=(r,c,style)=>{
+    const ref=XLSX.utils.encode_cell({r,c});
+    if(!ws[ref])ws[ref]={t:'s',v:''};
+    ws[ref].s=style;
+  };
+  setCellStyle(0,0,{font:{bold:true,sz:13,color:{rgb:'DB2777'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(1,0,{font:{bold:true,sz:11,color:{rgb:'1E293B'}},alignment:{horizontal:'center',vertical:'center'}});
+  setCellStyle(2,0,{font:{sz:9,color:{rgb:'64748B'}},alignment:{horizontal:'center',vertical:'center'}});
+  for(let c=0;c<totalCols;c++){
+    setCellStyle(headerRowIdx,c,{
+      font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+      fill:{fgColor:{rgb:'DB2777'}},
+      alignment:{horizontal:'center',vertical:'center',wrapText:true},
+      border:borderAll
+    });
+  }
+  for(let i=0;i<dataRows.length;i++){
+    const r=dataStartIdx+i;
+    const zebra=i%2===0?'FFFFFF':'FDF2F8';
+    for(let c=0;c<totalCols;c++){
+      const isText=c===2||c===3||c===6;
+      setCellStyle(r,c,{
+        font:{sz:9,color:{rgb:'1E293B'}},
+        fill:{fgColor:{rgb:zebra}},
+        alignment:{horizontal:isText?'left':'center',vertical:'center'},
+        border:borderAll,
+        numFmt:(c===4||c===5)?numFmt:undefined
+      });
+    }
+  }
+  for(let c=0;c<totalCols;c++){
+    setCellStyle(totalRowIdx,c,{
+      font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+      fill:{fgColor:{rgb:'1E293B'}},
+      alignment:{horizontal:c===3?'right':'center',vertical:'center'},
+      border:borderAll,
+      numFmt:(c===4||c===5)?numFmt:undefined
+    });
+  }
+
+  ws['!pageSetup']={paperSize:9,orientation:'portrait',fitToWidth:1,fitToHeight:0,horizontalDpi:300,verticalDpi:300};
+  ws['!margins']={left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2};
+  ws['!printOptions']={gridLines:false};
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Mutasi');
+  const fname='Laporan-Mutasi-'+(dari||'awal')+'_'+(sampai||'sekarang')+'.xlsx';
+  XLSX.writeFile(wb,fname);
+  toast('Excel berhasil diunduh!','success');
 }
 
 // ===================== REKAP =====================
@@ -3851,7 +4079,7 @@ function exportHTMLasPNG(htmlString, filename, afterExport){
 }
 
 function exportPNGKas(){
-  const s=state.settings,namaBank=s.namaBank||'Bank',noRek=s.noRek||'';
+  const s=state.settings,namaBank=s.namaBank||'Bank',noRek=s.noRek||'',atasNamaKas=s.atasNama||'';
   const allSorted=[...state.kasTransaksi].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||a.createdAt-b.createdAt);
   let rb=0,rt=0,totalMasuk=0,totalKeluar=0;
   const jLabel={setor_bank:`Setor ${namaBank}`,tarik_bank:`Tarik ${namaBank}`,masuk_tunai:'Masuk Tunai',keluar_tunai:'Keluar Tunai'};
@@ -3863,7 +4091,7 @@ function exportPNGKas(){
   }).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Laporan Kas Bendahara</title><style>${getPrintStyles()}</style></head><body>
   <div class="kop"><div class="kop-stripe"></div><div class="kop-text"><div class="kop-label">Laporan Kas Bendahara</div><div class="kop-judul">${s.namaSekolah||'Nama Sekolah'}</div><div class="kop-sub">${s.alamat||''} &nbsp;|&nbsp; TA ${s.ta||'-'} · Semester ${s.semester||'-'}</div></div></div>
-  <div class="info-grid" style="margin-bottom:10px"><div class="info-box info-box-blue"><div class="info-label info-label-blue">Bendahara</div><div class="info-val">${s.bendahara||'-'}</div></div><div class="info-box info-box-blue"><div class="info-label info-label-blue">Bank / No. Rek</div><div class="info-val">${namaBank}${noRek?' / '+noRek:''}</div></div></div>
+  <div class="info-grid" style="margin-bottom:10px"><div class="info-box info-box-blue"><div class="info-label info-label-blue">Bendahara</div><div class="info-val">${s.bendahara||'-'}</div></div><div class="info-box info-box-blue"><div class="info-label info-label-blue">Bank / No. Rek</div><div class="info-val">${namaBank}${noRek?' / '+noRek:''}${atasNamaKas?' a.n. '+atasNamaKas:''}</div></div></div>
   <div class="summary-bar"><div class="summary-card sc-green"><div class="sc-label">Total Masuk</div><div class="sc-val">${fmtRpPrint(totalMasuk)}</div></div><div class="summary-card sc-red"><div class="sc-label">Total Keluar</div><div class="sc-val">${fmtRpPrint(totalKeluar)}</div></div><div class="summary-card sc-purple"><div class="sc-label">Saldo Bersih</div><div class="sc-val">${fmtRpPrint(totalMasuk-totalKeluar)}</div></div></div>
   <table><thead><tr><th class="center">No</th><th>Tanggal</th><th>Jenis</th><th class="right">Masuk</th><th class="right">Keluar</th><th>Keterangan</th><th class="right">Saldo ${namaBank}</th><th class="right">Saldo Tunai</th></tr></thead><tbody>${rows||'<tr><td colspan="8" class="center" style="color:#94a3b8;padding:20px">Belum ada data kas</td></tr>'}</tbody><tr class="total-row"><td colspan="3" style="color:#fff;font-weight:800">TOTAL</td><td class="right">${fmtRpPrint(totalMasuk)}</td><td class="right" style="color:#f87171">${fmtRpPrint(totalKeluar)}</td><td></td><td class="right">${fmtRpPrint(rb)}</td><td class="right">${fmtRpPrint(rt)}</td></tr></table>
   <div class="ttd-row" style="justify-content:flex-end"><div class="ttd-box"><div class="ttd-title">Bendahara</div><div class="ttd-gap">${s.ttdMode!=='manual'?`<div class="ttd-qr">${qrSvgTag('TTD-BENDAHARA|'+(s.bendahara||'-')+'|'+new Date().toISOString())}</div>`:''}</div><div class="ttd-line">${s.bendahara||'(................................)'}</div></div></div>
@@ -3949,7 +4177,8 @@ function setSTPilihSumber(val){
       const s=state.settings;
       const bankNama=s.namaBank2||s.namaBank||'(Belum diisi)';
       const bankRek=s.noRek2||s.noRek||'-';
-      $('st-rekening-angka').textContent=bankNama+' / '+bankRek;
+      const bankAn=s.atasNama2||s.atasNama||'-';
+      $('st-rekening-angka').textContent=bankNama+' / '+bankRek+' a.n. '+bankAn;
       rekBox.style.display='block';
     }else{
       rekBox.style.display='none';
@@ -4113,7 +4342,8 @@ function buildSerahTerimaHTML(d){
   const s=state.settings;
   const tglPanjang=new Date(d.tanggal+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const namaBankSet=s.namaBank2||s.namaBank||'Bank';
-  const noRekSet=(s.noRek2||s.noRek)?(' • No. Rek '+(s.noRek2||s.noRek)):'';
+  const noRekSet=s.noRek2||s.noRek||'-';
+  const atasNamaSet=s.atasNama2||s.atasNama||'-';
   let sumberLabel='';
   let rincianHTML='';
   if(d.sumber==='tunai'){
@@ -4126,15 +4356,20 @@ function buildSerahTerimaHTML(d){
     sumberLabel='Transfer Bank ('+namaBankSet+')';
     rincianHTML=`<table style="margin-bottom:6px;font-size:9pt;width:100%">
       <tr><td style="padding:3px 0;color:#64748b;width:160px">Metode Penyerahan</td><td style="font-weight:700">: Transfer Bank</td></tr>
-      <tr><td style="padding:3px 0;color:#64748b">Rekening Tujuan (Bendahara Utama)</td><td style="font-weight:700">: ${namaBankSet}${noRekSet}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Bank Tujuan</td><td style="font-weight:700">: ${namaBankSet}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">No. Rekening Tujuan</td><td style="font-weight:700">: ${noRekSet}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Atas Nama</td><td style="font-weight:700">: ${atasNamaSet}</td></tr>
       <tr><td style="padding:3px 0;color:#64748b">Jumlah Transfer</td><td style="font-weight:700">: ${fmtRpPrint(d.nominal)}</td></tr>
     </table>`;
   }else{
     sumberLabel='Tunai & Transfer Bank (Campuran)';
     rincianHTML=`<table style="margin-bottom:6px;font-size:9pt;width:100%">
-      <tr><td style="padding:3px 0;color:#64748b;width:160px">Metode Penyerahan</td><td style="font-weight:700">: Campuran</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b;width:160px">Metode Penyerahan</td><td style="font-weight:700">: Campuran (Tunai + Transfer)</td></tr>
       <tr><td style="padding:3px 0;color:#64748b">Uang Tunai</td><td style="font-weight:700">: ${fmtRpPrint(d.rincianTunai||0)}</td></tr>
-      <tr><td style="padding:3px 0;color:#64748b">Transfer Bank ke Rek. Bendahara Utama (${namaBankSet}${noRekSet})</td><td style="font-weight:700">: ${fmtRpPrint(d.rincianBank||0)}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Transfer Bank</td><td style="font-weight:700">: ${fmtRpPrint(d.rincianBank||0)}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Bank Tujuan Transfer</td><td style="font-weight:700">: ${namaBankSet}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">No. Rekening Tujuan</td><td style="font-weight:700">: ${noRekSet}</td></tr>
+      <tr><td style="padding:3px 0;color:#64748b">Atas Nama</td><td style="font-weight:700">: ${atasNamaSet}</td></tr>
     </table>`;
   }
   return`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Berita Acara Serah Terima</title>
