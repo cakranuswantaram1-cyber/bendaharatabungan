@@ -1,6 +1,6 @@
-// Service Worker untuk TabBend - Tabungan Sekolah (update otomatis)
+// Service Worker untuk Tabungan Sekolah (update otomatis)
 const CACHE_PREFIX = 'tabbend-';
-const CACHE_NAME = CACHE_PREFIX + 'v1'; // naikkan (v2, v3, ...) HANYA bila menambah/mengganti file di FILES_TO_CACHE
+const CACHE_NAME = CACHE_PREFIX + 'v2'; // naikkan (v2, v3, ...) HANYA bila menambah/mengganti file di FILES_TO_CACHE
 
 const FILES_TO_CACHE = [
   './index.html',

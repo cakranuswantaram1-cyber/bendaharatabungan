@@ -1,6 +1,6 @@
 {
-  "name": "TabBend - Tabungan Sekolah",
-  "short_name": "TabBend",
+  "name": "Tabungan Sekolah",
+  "short_name": "Tabungan Sekolah",
   "description": "Sistem Manajemen Tabungan dan Kas Bendahara Sekolah",
   "start_url": "./index.html",
   "scope": "./",
