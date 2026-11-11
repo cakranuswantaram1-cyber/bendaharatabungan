@@ -689,7 +689,7 @@ select.filter-select{border-radius:999px;border:1px solid var(--border2);padding
       <div class="card">
         <div class="card-header">
           <div class="card-title"><div class="card-icon" style="background:var(--pink-dim);color:var(--pink)"><i class="fas fa-history" style="font-size:11px"></i></div> Transaksi Terakhir</div>
-          <div class="btn btn-ghost btn-xs" onclick="switchView('mutasi')">Lihat Semua <i class="fas fa-chevron-right" style="font-size:10px"></i></div>
+          <div class="btn btn-ghost btn-xs" onclick="switchView('laporan');switchLapTab('mutasi')">Lihat Semua <i class="fas fa-chevron-right" style="font-size:10px"></i></div>
         </div>
         <div id="dash-recent"></div>
       </div>
@@ -1317,6 +1317,40 @@ select.filter-select{border-radius:999px;border:1px solid var(--border2);padding
       <div class="card" id="dataguru-list-card"></div>
     </div>
 
+    <!-- VIEW: KWITANSI SETORAN -->
+    <div class="view" id="view-kwitansi">
+      <div class="card"><div class="card-body">
+        <div class="form-group"><label class="form-label">Kelas</label><select id="kws-kelas" class="form-input" onchange="kwsPilihKelas()"></select></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Siswa</label><select id="kws-siswa" class="form-input" onchange="kwsRender()"></select></div>
+      </div></div>
+      <div class="card" id="kws-list-card"></div>
+    </div>
+
+    <!-- VIEW: ARSIP TAHUN AJARAN -->
+    <div class="view" id="view-arsipta">
+      <div class="card"><div class="card-body" id="arsta-ringkas"></div></div>
+      <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--blue-dim);color:var(--blue)"><i class="fas fa-box-archive" style="font-size:11px"></i></div> Riwayat Arsip</div></div><div id="arsta-list"></div></div>
+    </div>
+
+    <!-- VIEW: KENAIKAN KELAS & KELULUSAN -->
+    <div class="view" id="view-kenaikan">
+      <div class="card"><div class="card-body" style="font-size:12px;line-height:1.6;color:var(--text3)">
+        Tentukan tujuan tiap kelas. <b>Tetap</b> = tidak dipindah. <b>Lulus</b> = siswa dipindah ke kelas "Alumni". Buka daftar siswa untuk mengecualikan yang tinggal kelas. Saldo dan riwayat transaksi tidak berubah.
+        <div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="backupData()"><i class="fas fa-download"></i> Cadangkan dulu</button></div>
+      </div></div>
+      <div id="knk-list"></div>
+      <button class="btn btn-primary btn-full" style="margin-bottom:12px" onclick="knkProses()"><i class="fas fa-graduation-cap"></i> Proses Kenaikan Kelas</button>
+    </div>
+
+    <!-- VIEW: TEMPAT SAMPAH -->
+    <div class="view" id="view-sampah">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
+        <div style="font-size:11px;color:var(--text3)">Menyimpan maksimal 100 data terhapus terakhir.</div>
+        <button class="btn btn-danger btn-sm" onclick="smpKosongkan()"><i class="fas fa-trash"></i> Kosongkan</button>
+      </div>
+      <div class="card" id="smp-list-card"></div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /app -->
 
@@ -1347,6 +1381,9 @@ select.filter-select{border-radius:999px;border:1px solid var(--border2);padding
     <div class="drawer-item" onclick="switchView('dataguru')" id="drawer-dataguru">
       <i class="fas fa-chalkboard-teacher"></i> Wali Kelas &amp; Guru
     </div>
+    <div class="drawer-item" onclick="switchView('kenaikan')" id="drawer-kenaikan">
+      <i class="fas fa-graduation-cap"></i> Kenaikan Kelas
+    </div>
     <div class="drawer-section-label">Transaksi Tabungan</div>
     <div class="drawer-item" onclick="switchView('tabungan')" id="drawer-tabungan">
       <i class="fas fa-piggy-bank"></i> Tabungan
@@ -1356,6 +1393,9 @@ select.filter-select{border-radius:999px;border:1px solid var(--border2);padding
     </div>
     <div class="drawer-item" onclick="switchView('pengambilantabungan')" id="drawer-pengambilantabungan">
       <i class="fas fa-hand-holding-usd"></i> Pengambilan Tabungan
+    </div>
+    <div class="drawer-item" onclick="switchView('kwitansi')" id="drawer-kwitansi">
+      <i class="fas fa-receipt"></i> Kwitansi Setoran
     </div>
     <div class="drawer-section-label">Keuangan Bendahara</div>
     <div class="drawer-item" onclick="switchView('kas')" id="drawer-kas">
@@ -1390,6 +1430,12 @@ select.filter-select{border-radius:999px;border:1px solid var(--border2);padding
       <i class="fas fa-book-open"></i> Buku Tabungan
     </div>
     <div class="drawer-section-label">Sistem</div>
+    <div class="drawer-item" onclick="switchView('arsipta')" id="drawer-arsipta">
+      <i class="fas fa-box-archive"></i> Arsip Tahun Ajaran
+    </div>
+    <div class="drawer-item" onclick="switchView('sampah')" id="drawer-sampah">
+      <i class="fas fa-trash-can-arrow-up"></i> Tempat Sampah
+    </div>
     <div class="drawer-item" onclick="goLog()" id="drawer-logaktivitas">
       <i class="fas fa-clipboard-list"></i> Log Aktivitas
     </div>
@@ -8260,6 +8306,273 @@ function exportExcelRekapHarian(){
     </div>
   </div>
 </div>
+
+<script>
+// ===================== TAMBAHAN: KWITANSI SETORAN, ARSIP TAHUN AJARAN, TEMPAT SAMPAH =====================
+// Catatan: fungsi lama tidak diubah. saveData & switchView hanya dibungkus (fungsi aslinya tetap dipanggil).
+function xtraEsc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+(function(){
+  var _saveAsli=saveData;
+  saveData=function(){
+    try{smpDeteksi();}catch(e){console.warn('Tempat Sampah:',e);}
+    return _saveAsli.apply(this,arguments);
+  };
+  var _svAsli=switchView;
+  var judul={kwitansi:'Kwitansi Setoran',arsipta:'Arsip Tahun Ajaran',sampah:'Tempat Sampah',kenaikan:'Kenaikan Kelas'};
+  var render={kwitansi:function(){kwsInit();},arsipta:function(){arsTaRender();},sampah:function(){smpRender();},kenaikan:function(){knkRender();}};
+  switchView=function(view){
+    var r=_svAsli.apply(this,arguments);
+    if(judul[view]){
+      var h=$('h-title');if(h)h.textContent=judul[view];
+      try{render[view]();}catch(e){console.error(e);}
+    }
+    return r;
+  };
+})();
+
+/* ---------- KWITANSI SETORAN ---------- */
+function kwsInit(){
+  var sel=$('kws-kelas');
+  sel.innerHTML=state.kelas.map(function(k){return'<option value="'+k.id+'">'+xtraEsc(k.nama)+'</option>';}).join('')||'<option value="">(belum ada kelas)</option>';
+  kwsPilihKelas();
+}
+function kwsPilihKelas(){
+  var kid=$('kws-kelas').value;
+  var list=state.siswa.filter(function(s){return s.kelasId===kid;}).sort(function(a,b){return(a.absen||0)-(b.absen||0);});
+  $('kws-siswa').innerHTML=list.map(function(s){return'<option value="'+s.id+'">'+(s.absen?s.absen+'. ':'')+xtraEsc(s.nama)+'</option>';}).join('')||'<option value="">(belum ada siswa)</option>';
+  kwsRender();
+}
+function kwsRender(){
+  var sid=$('kws-siswa').value,card=$('kws-list-card');
+  if(!sid){card.innerHTML='<div class="card-body" style="text-align:center;color:var(--text3);font-size:12px">Pilih kelas dan siswa.</div>';return;}
+  var trx=state.transaksi.filter(function(t){return t.siswaId===sid;}).sort(function(a,b){return(b.tanggal||'').localeCompare(a.tanggal||'')||(b.createdAt||0)-(a.createdAt||0);});
+  if(!trx.length){card.innerHTML='<div class="card-body" style="text-align:center;color:var(--text3);font-size:12px">Belum ada transaksi untuk siswa ini.</div>';return;}
+  card.innerHTML=trx.slice(0,60).map(function(t){
+    var tarik=t.jenis==='tarik';
+    return'<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)">'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:'+(tarik?'var(--amber)':'var(--green)')+'">'+(tarik?'Tarik ':'Setor ')+fmtRp(t.nominal)+'</div>'
+      +'<div style="font-size:11px;color:var(--text3)">'+fmtDatePrint(t.tanggal)+(t.ket?' · '+xtraEsc(t.ket):'')+'</div></div>'
+      +'<button class="btn btn-ghost btn-xs" title="Cetak" onclick="kwsCetak(\''+t.id+'\')"><i class="fas fa-print"></i></button>'
+      +'<button class="btn btn-ghost btn-xs" title="Simpan PNG" onclick="kwsPNG(\''+t.id+'\')"><i class="fas fa-image"></i></button></div>';
+  }).join('')+(trx.length>60?'<div style="padding:10px;text-align:center;font-size:11px;color:var(--text3)">Menampilkan 60 transaksi terbaru dari '+trx.length+'</div>':'');
+}
+function kwsBuildHTML(trxId){
+  var t=state.transaksi.find(function(x){return x.id===trxId;});if(!t)return null;
+  var s=getSiswa(t.siswaId),k=getKelas(s.kelasId),st=state.settings,tarik=t.jenis==='tarik';
+  var asc=state.transaksi.filter(function(x){return x.siswaId===t.siswaId;}).sort(function(a,b){return(a.tanggal||'').localeCompare(b.tanggal||'')||(a.createdAt||0)-(b.createdAt||0);});
+  var run=0,sebelum=0,sesudah=0;
+  for(var i=0;i<asc.length;i++){
+    if(asc[i].id===t.id)sebelum=run;
+    run+=(asc[i].jenis==='tarik'?-asc[i].nominal:asc[i].nominal);
+    if(asc[i].id===t.id){sesudah=run;break;}
+  }
+  var warna=tarik?'#d97706':'#db2777';
+  var judulDoc=tarik?'Kwitansi Penarikan Tabungan':'Kwitansi Setoran Tabungan';
+  var noKw='KW-'+(t.tanggal||'').replace(/-/g,'')+'-'+String(t.id).replace(/[^a-zA-Z0-9]/g,'').slice(-4).toUpperCase();
+  var pihak=tarik?'Penerima':'Penyetor';
+  return'<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+judulDoc+' - '+xtraEsc(s.nama)+'</title><style>'+getPrintStyles()
+    +'.doc-title{font-size:13pt;font-weight:900;text-align:center;color:#1e293b;margin:16px 0 4px;text-transform:uppercase;letter-spacing:.05em;}'
+    +'.doc-sub{font-size:9pt;text-align:center;color:#64748b;margin-bottom:14px;}'
+    +'.dt{width:100%;border-collapse:collapse;margin-bottom:12px;}.dt td{padding:6px 8px;font-size:9.5pt;vertical-align:top;border-bottom:1px solid #f1f5f9;}.dt td:first-child{width:36%;font-weight:700;color:#475569;}'
+    +'.nb{border:2px solid '+warna+';border-radius:10px;padding:14px 18px;text-align:center;margin:14px 0;}.nl{font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:'+warna+';}.nv{font-size:20pt;font-weight:900;color:'+warna+';font-family:monospace;}.tb{font-size:8pt;color:#64748b;margin-top:4px;font-style:italic;}'
+    +'.sr{display:flex;gap:10px;margin:8px 0;}.si{flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;text-align:center;}.sil{font-size:7pt;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:3px;}.siv{font-weight:900;font-family:monospace;font-size:10pt;}'
+    +'.tr2{display:flex;justify-content:space-between;margin-top:36px;gap:20px;}.tbx{flex:1;text-align:center;}.tl{font-size:8pt;color:#64748b;font-weight:600;}.tg{height:52px;}.tln{border-top:2px solid #1e293b;padding-top:5px;font-weight:800;font-size:9.5pt;color:#1e293b;}'
+    +'</style></head><body>'
+    +'<div class="kop"><div class="kop-text"><div class="kop-label">'+judulDoc+'</div><div class="kop-judul">'+xtraEsc(st.namaSekolah||'Nama Sekolah')+'</div><div class="kop-sub">'+xtraEsc(st.alamat||'')+' | TA '+xtraEsc(st.ta||'-')+' · Semester '+xtraEsc(st.semester||'-')+'</div></div></div>'
+    +'<div class="doc-title">'+judulDoc+'</div><div class="doc-sub">No. '+noKw+'</div>'
+    +'<table class="dt"><tr><td>Nama Siswa</td><td>: <b>'+xtraEsc(s.nama||'-')+'</b></td></tr>'
+    +'<tr><td>Kelas</td><td>: '+xtraEsc(k.nama||'-')+(s.nis?' · NIS '+xtraEsc(s.nis):'')+'</td></tr>'
+    +'<tr><td>Tanggal</td><td>: <b>'+_tglPanjangFromStr(t.tanggal)+'</b></td></tr>'
+    +'<tr><td>Keterangan</td><td>: '+xtraEsc(t.ket||'-')+'</td></tr></table>'
+    +'<div class="nb"><div class="nl">Jumlah '+(tarik?'Penarikan':'Setoran')+'</div><div class="nv">'+fmtRpPrint(t.nominal)+'</div><div class="tb">"'+terbilangRupiah(t.nominal)+'"</div></div>'
+    +'<div class="sr"><div class="si"><div class="sil">Saldo Sebelum</div><div class="siv">'+fmtRpPrint(sebelum)+'</div></div><div class="si"><div class="sil">Saldo Sesudah</div><div class="siv">'+fmtRpPrint(sesudah)+'</div></div></div>'
+    +'<div class="tr2"><div class="tbx"><div class="tl">'+pihak+'</div><div class="tg"></div><div class="tln">'+xtraEsc(s.nama||'................')+'</div></div>'
+    +'<div class="tbx"><div class="tl">Bendahara</div><div class="tg"></div><div class="tln">'+xtraEsc(st.bendahara||'................')+'</div></div></div>'
+    +'</body></html>';
+}
+function kwsCetak(id){var h=kwsBuildHTML(id);if(!h){toast('Transaksi tidak ditemukan','error');return;}openPrintBlob(h);}
+function kwsPNG(id){
+  var h=kwsBuildHTML(id);if(!h){toast('Transaksi tidak ditemukan','error');return;}
+  var t=state.transaksi.find(function(x){return x.id===id;});
+  exportHTMLasPNG(h,'kwitansi-'+(getSiswa(t.siswaId).nama||'siswa').replace(/\s+/g,'-')+'-'+(t.tanggal||''));
+}
+
+/* ---------- ARSIP TAHUN AJARAN ---------- */
+function arsTaHitung(){
+  var siswa=state.siswa.map(function(s){
+    var st=getTotalSetor(s.id),tk=getTotalTarik(s.id);
+    return{nama:s.nama,kelas:getKelas(s.kelasId).nama||'-',nis:s.nis||'',absen:s.absen||0,setor:st,tarik:tk,saldo:st-tk};
+  });
+  var setor=0,tarik=0;siswa.forEach(function(x){setor+=x.setor;tarik+=x.tarik;});
+  return{siswa:siswa,setor:setor,tarik:tarik,saldo:setor-tarik};
+}
+function arsTaRender(){
+  var st=state.settings,h=arsTaHitung();state.arsipTA=state.arsipTA||[];
+  $('arsta-ringkas').innerHTML='<div style="font-size:12px;color:var(--text3)">Tahun ajaran aktif</div>'
+    +'<div style="font-size:18px;font-weight:800;margin:2px 0 10px">'+xtraEsc(st.ta||'(belum diisi)')+(st.semester?' · '+xtraEsc(st.semester):'')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:12px">'
+    +'<div>Kelas: <b>'+state.kelas.length+'</b></div><div>Siswa: <b>'+state.siswa.length+'</b></div>'
+    +'<div>Total setor: <b>'+fmtRp(h.setor)+'</b></div><div>Total tarik: <b>'+fmtRp(h.tarik)+'</b></div>'
+    +'<div style="grid-column:1/3">Total saldo tabungan: <b style="color:var(--green)">'+fmtRp(h.saldo)+'</b></div></div>'
+    +'<button class="btn btn-primary btn-full" onclick="arsTaTutup()"><i class="fas fa-lock"></i> Tutup Tahun Ajaran &amp; Arsipkan</button>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">Data per siswa disalin ke arsip. Transaksi tidak dihapus, jadi saldo siswa tetap berlanjut ke tahun ajaran baru.</div>';
+  var list=state.arsipTA.slice().sort(function(a,b){return b.tgl-a.tgl;});
+  $('arsta-list').innerHTML=list.length?list.map(function(a){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)">'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">TA '+xtraEsc(a.ta||'-')+(a.semester?' · '+xtraEsc(a.semester):'')+'</div>'
+      +'<div style="font-size:11px;color:var(--text3)">Ditutup '+fmtDatePrint(a.tanggal)+' · '+a.siswa.length+' siswa · Saldo '+fmtRp(a.saldo)+'</div></div>'
+      +'<button class="btn btn-ghost btn-xs" title="Unduh Excel" onclick="arsTaExcel(\''+a.id+'\')"><i class="fas fa-file-excel"></i></button>'
+      +'<button class="btn btn-ghost btn-xs" title="Hapus arsip" onclick="arsTaHapus(\''+a.id+'\')"><i class="fas fa-trash"></i></button></div>';
+  }).join(''):'<div class="card-body" style="text-align:center;color:var(--text3);font-size:12px">Belum ada arsip.</div>';
+}
+function arsTaTutup(){
+  var st=state.settings,m=/^(\d{4})\/(\d{4})$/.exec(st.ta||'');
+  var saran=m?(+m[1]+1)+'/'+(+m[2]+1):'';
+  Swal.fire({
+    title:'Tutup Tahun Ajaran?',
+    html:'<div style="text-align:left;font-size:13px;line-height:1.5">Data TA <b>'+xtraEsc(st.ta||'-')+'</b> akan diarsipkan. Disarankan cadangkan data dulu.'
+      +'<div class="form-group" style="margin-top:12px"><label class="form-label">Tahun ajaran baru</label><input id="swal-ars-ta" class="form-input" value="'+xtraEsc(saran)+'" placeholder="cth: 2026/2027"></div>'
+      +'<div class="form-group" style="margin-bottom:0"><label class="form-label">Semester baru</label><input id="swal-ars-sem" class="form-input" value="'+xtraEsc(st.semester||'')+'"></div></div>',
+    showCancelButton:true,confirmButtonText:'Arsipkan',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#db2777',focusConfirm:false,
+    preConfirm:function(){
+      var ta=$('swal-ars-ta').value.trim();
+      if(!ta){Swal.showValidationMessage('Isi tahun ajaran baru');return false;}
+      return{ta:ta,sem:$('swal-ars-sem').value.trim()};
+    }
+  }).then(function(r){
+    if(!r.isConfirmed)return;
+    var h=arsTaHitung();state.arsipTA=state.arsipTA||[];
+    state.arsipTA.push({id:genId(),ta:st.ta||'',semester:st.semester||'',tgl:Date.now(),tanggal:todayStr(),setor:h.setor,tarik:h.tarik,saldo:h.saldo,siswa:h.siswa});
+    st.ta=r.value.ta;st.semester=r.value.sem;
+    saveData();loadSettings();arsTaRender();toast('Tahun ajaran diarsipkan!','success');
+  });
+}
+function arsTaExcel(id){
+  var a=(state.arsipTA||[]).find(function(x){return x.id===id;});if(!a)return;
+  if(typeof XLSX==='undefined'){toast('Library Excel belum termuat, coba lagi.','error');return;}
+  var rows=[['No','Nama','Kelas','NIS','Total Setor','Total Tarik','Saldo']].concat(a.siswa.map(function(s,i){return[i+1,s.nama,s.kelas,s.nis,s.setor,s.tarik,s.saldo];}));
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Arsip');
+  XLSX.writeFile(wb,'arsip-tabungan-'+String(a.ta||'').replace(/[^0-9A-Za-z]+/g,'-')+'.xlsx');
+}
+function arsTaHapus(id){
+  Swal.fire({title:'Hapus arsip?',text:'Arsip ini akan dihapus permanen.',icon:'warning',showCancelButton:true,confirmButtonText:'Hapus',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#dc2626'}).then(function(r){
+    if(r.isConfirmed){state.arsipTA=(state.arsipTA||[]).filter(function(x){return x.id!==id;});saveData();arsTaRender();toast('Arsip dihapus','success');}
+  });
+}
+
+/* ---------- TEMPAT SAMPAH ---------- */
+function smpDeteksi(){
+  if(!lastSnapshot)return;
+  var prev=JSON.parse(lastSnapshot);
+  if(!Array.isArray(state.sampah))state.sampah=[];
+  var idS=new Set((state.siswa||[]).map(function(x){return x.id;}));
+  var idT=new Set((state.transaksi||[]).map(function(x){return x.id;}));
+  var idK=new Set((state.kasTransaksi||[]).map(function(x){return x.id;}));
+  var sH=(prev.siswa||[]).filter(function(x){return!idS.has(x.id);});
+  var tH=(prev.transaksi||[]).filter(function(x){return!idT.has(x.id);});
+  var kH=(prev.kasTransaksi||[]).filter(function(x){return!idK.has(x.id);});
+  if(!sH.length&&!tH.length&&!kH.length)return;
+  if(sH.length+tH.length+kH.length>300)return; // hapus massal / reset data: tidak masuk sampah
+  var now=Date.now(),baru=[],sIds=new Set(sH.map(function(x){return x.id;}));
+  sH.forEach(function(s){baru.push({id:genId(),tipe:'siswa',tgl:now,data:s,trx:tH.filter(function(t){return t.siswaId===s.id;}),label:s.nama});});
+  tH.filter(function(t){return!sIds.has(t.siswaId);}).forEach(function(t){
+    baru.push({id:genId(),tipe:'trx',tgl:now,data:t,label:(getSiswa(t.siswaId).nama||'?')+' · '+(t.jenis==='tarik'?'Tarik ':'Setor ')+fmtRp(t.nominal)});
+  });
+  kH.forEach(function(k){baru.push({id:genId(),tipe:'kas',tgl:now,data:k,label:'Kas: '+(k.ket||k.keterangan||k.jenis||'transaksi')+' '+fmtRp(k.nominal)});});
+  state.sampah=baru.concat(state.sampah).slice(0,100);
+}
+function smpRender(){
+  var list=state.sampah||[],card=$('smp-list-card');
+  if(!list.length){card.innerHTML='<div class="card-body" style="text-align:center;color:var(--text3);font-size:12px">Tempat sampah kosong.</div>';return;}
+  var nama={siswa:'Siswa',trx:'Transaksi',kas:'Kas'};
+  card.innerHTML=list.map(function(e){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)">'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+xtraEsc(e.label)+'</div>'
+      +'<div style="font-size:11px;color:var(--text3)">'+nama[e.tipe]+(e.tipe==='siswa'&&e.trx&&e.trx.length?' + '+e.trx.length+' transaksi':'')+' · dihapus '+new Date(e.tgl).toLocaleDateString('id-ID')+'</div></div>'
+      +'<button class="btn btn-ghost btn-xs" onclick="smpPulihkan(\''+e.id+'\')"><i class="fas fa-rotate-left"></i> Pulihkan</button>'
+      +'<button class="btn btn-ghost btn-xs" title="Hapus permanen" onclick="smpHapus(\''+e.id+'\')"><i class="fas fa-xmark"></i></button></div>';
+  }).join('');
+}
+function smpPulihkan(id){
+  var e=(state.sampah||[]).find(function(x){return x.id===id;});if(!e)return;
+  if(e.tipe==='siswa'){
+    if(!getKelas(e.data.kelasId).id){toast('Kelas asal siswa sudah dihapus, tidak bisa dipulihkan.','error');return;}
+    state.siswa.push(e.data);(e.trx||[]).forEach(function(t){state.transaksi.push(t);});
+  }else if(e.tipe==='trx'){
+    if(!getSiswa(e.data.siswaId).id){toast('Siswa pemilik transaksi sudah dihapus.','error');return;}
+    state.transaksi.push(e.data);
+  }else{
+    state.kasTransaksi=state.kasTransaksi||[];state.kasTransaksi.push(e.data);
+  }
+  state.sampah=state.sampah.filter(function(x){return x.id!==id;});
+  saveData();populateSelects();smpRender();toast('Data dipulihkan!','success');
+}
+function smpHapus(id){
+  state.sampah=(state.sampah||[]).filter(function(x){return x.id!==id;});
+  saveData();smpRender();toast('Dihapus permanen','success');
+}
+function smpKosongkan(){
+  if(!(state.sampah||[]).length)return;
+  Swal.fire({title:'Kosongkan Tempat Sampah?',text:'Semua data di sini akan hilang permanen.',icon:'warning',showCancelButton:true,confirmButtonText:'Kosongkan',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#dc2626'}).then(function(r){
+    if(r.isConfirmed){state.sampah=[];saveData();smpRender();toast('Tempat sampah dikosongkan','success');}
+  });
+}
+
+/* ---------- KENAIKAN KELAS & KELULUSAN ---------- */
+function knkAlumni(nama){return/^Alumni /.test(nama||'');}
+function knkRender(){
+  var ks=state.kelas.filter(function(k){return!knkAlumni(k.nama);}),box=$('knk-list');
+  if(!ks.length){box.innerHTML='<div class="card"><div class="card-body" style="text-align:center;color:var(--text3);font-size:12px">Belum ada kelas.</div></div>';return;}
+  box.innerHTML=ks.map(function(k){
+    var sis=state.siswa.filter(function(s){return s.kelasId===k.id;}).sort(function(a,b){return(a.absen||0)-(b.absen||0);});
+    var def='tetap',m=/\d+/.exec(k.nama||'');
+    if(m){var cand=k.nama.replace(m[0],String(+m[0]+1)).toLowerCase();var f=ks.find(function(x){return x.id!==k.id&&(x.nama||'').toLowerCase()===cand;});if(f)def='k:'+f.id;}
+    var opts='<option value="tetap">Tetap di kelas ini</option>'
+      +ks.filter(function(x){return x.id!==k.id;}).map(function(x){return'<option value="k:'+x.id+'"'+(def==='k:'+x.id?' selected':'')+'>Naik ke '+xtraEsc(x.nama)+'</option>';}).join('')
+      +'<option value="lulus">Lulus (ke Alumni)</option>';
+    return'<div class="card"><div class="card-body">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-size:14px">'+xtraEsc(k.nama)+'</b><span style="font-size:11px;color:var(--text3)">'+sis.length+' siswa</span></div>'
+      +'<select id="knk-t-'+k.id+'" class="form-input">'+opts+'</select>'
+      +'<details style="margin-top:8px"><summary style="font-size:12px;color:var(--text3);cursor:pointer">Daftar siswa (hilangkan centang jika tinggal kelas)</summary><div style="margin-top:6px">'
+      +(sis.map(function(s){return'<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px"><input type="checkbox" class="knk-cb" data-k="'+k.id+'" value="'+s.id+'" checked> <span style="flex:1">'+(s.absen?s.absen+'. ':'')+xtraEsc(s.nama)+'</span><span style="color:var(--text3)">'+fmtRp(getSaldoSiswa(s.id))+'</span></label>';}).join('')||'<div style="font-size:12px;color:var(--text3)">Belum ada siswa.</div>')
+      +'</div></details></div></div>';
+  }).join('');
+}
+function knkProses(){
+  var map={},naik=0,lulus=0,saldoLulus=0,rinci=[];
+  state.kelas.forEach(function(k){
+    var sel=$('knk-t-'+k.id);if(!sel||sel.value==='tetap')return;
+    var cbs=document.querySelectorAll('.knk-cb[data-k="'+k.id+'"]:checked');
+    if(!cbs.length)return;
+    var tujuan=sel.value;
+    cbs.forEach(function(cb){map[cb.value]=tujuan;if(tujuan==='lulus')saldoLulus+=getSaldoSiswa(cb.value);});
+    if(tujuan==='lulus')lulus+=cbs.length;else naik+=cbs.length;
+    rinci.push(xtraEsc(k.nama)+': '+cbs.length+' siswa &rarr; '+(tujuan==='lulus'?'<b>Lulus</b>':xtraEsc(getKelas(tujuan.slice(2)).nama||'?')));
+  });
+  if(!naik&&!lulus){toast('Belum ada kelas yang dipindah.','error');return;}
+  Swal.fire({
+    title:'Proses Kenaikan Kelas?',
+    html:'<div style="text-align:left;font-size:13px;line-height:1.6">'+rinci.join('<br>')+'<br><br>Naik kelas: <b>'+naik+'</b> · Lulus: <b>'+lulus+'</b></div>',
+    icon:'question',showCancelButton:true,confirmButtonText:'Proses',cancelButtonText:'Batal',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#db2777'
+  }).then(function(r){
+    if(!r.isConfirmed)return;
+    var alumniId=null;
+    if(lulus){
+      var nmA='Alumni '+(state.settings.ta||new Date().getFullYear());
+      var ada=state.kelas.find(function(k){return k.nama===nmA;});
+      if(ada)alumniId=ada.id;else{alumniId=genId();state.kelas.push({id:alumniId,nama:nmA,wali:''});}
+    }
+    state.siswa.forEach(function(s){
+      var t=map[s.id];if(!t)return;
+      s.kelasId=(t==='lulus')?alumniId:t.slice(2);
+    });
+    saveData();populateSelects();knkRender();
+    toast('Kenaikan kelas diproses!','success');
+    if(saldoLulus>0)Swal.fire({title:'Perhatian',html:'Siswa yang lulus masih memiliki saldo total <b>'+fmtRp(saldoLulus)+'</b>. Lakukan penarikan lewat menu Tabungan (kelas Alumni) atau Pengambilan Tabungan.',icon:'info',background:'var(--surface)',color:'var(--text)',confirmButtonColor:'#db2777'});
+  });
+}
+</script>
 
 </body>
 </html>
