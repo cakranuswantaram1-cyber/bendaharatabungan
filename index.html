@@ -1650,6 +1650,7 @@ select.form-input,select.filter-select,.lsb-sel{color-scheme:light dark}
       <div class="card">
         <div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--amber-dim);color:var(--amber)"><i class="fas fa-database" style="font-size:11px"></i></div> Data & Backup</div></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+          <div id="bk-status" style="background:var(--surface2,rgba(127,127,127,.08));border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;color:var(--text2)">Memeriksa penyimpanan backup...</div>
           <div style="height:1px;background:var(--border)"></div>
           <div id="backup-folder-row" style="display:none;font-size:11px;color:var(--text2);align-items:center;gap:6px"><i class="fas fa-folder" style="color:var(--amber)"></i> <span id="backup-folder-info">Folder belum dipilih</span></div>
           <button class="btn btn-ghost btn-full" id="btn-pilih-folder" onclick="pilihLokasiBackup()" style="display:none"><i class="fas fa-folder-open"></i> Pilih Lokasi Backup</button>
@@ -6371,9 +6372,38 @@ function fmtBackupInfo(meta){
   return BK_APP_NAME+' · Backup terakhir: '+tgl+' '+jam;
 }
 
+async function renderBackupStatus(){
+  const el=document.getElementById('bk-status');if(!el)return;
+  const meta=getBackupMeta();
+  let metode,nama,lokasi,catatan='';
+  let fh=null;
+  if(!backupDirHandle&&typeof window.showSaveFilePicker==='function'){try{fh=await idbGet('backupFile');}catch(e){}}
+  if(backupDirHandle){
+    metode='Folder pilihan';
+    nama=meta.naming==='tgl'?'TabBend-backup_<i>TANGGAL</i>_<i>JAM</i>.json (bertanggal)':BK_FILENAME;
+    lokasi='Folder "'+_hx(backupDirHandle.name)+'"';
+    catatan='Browser hanya memberi nama folder, bukan alamat lengkapnya. Folder ini yang kamu pilih lewat "Pilih Lokasi Backup".';
+  }else if(fh){
+    metode='File pilihan (ditimpa tiap backup)';
+    nama=_hx(fh.name);
+    lokasi='Lokasi file yang kamu pilih saat pertama kali menyimpan';
+    catatan='Browser tidak menampilkan alamat lengkap file; hanya namanya.';
+  }else{
+    metode='Unduhan biasa';
+    nama=BK_FILENAME;
+    lokasi='Folder Unduhan (Download) bawaan browser/HP';
+    catatan='Browser ini tidak bisa menyimpan ke folder tertentu. Jika sudah ada file bernama sama, browser bisa menambah angka, mis. TabBend-backup (1).json.';
+  }
+  let terakhir='';
+  if(meta.lastBackup){
+    const lm={folder:'folder "'+_hx(meta.lastPlace||'')+'"',file:'file pilihan',download:'folder Unduhan'}[meta.lastMethod]||'';
+    terakhir=bkBaris('Backup terakhir',_hx(fmtBackupInfo(meta).replace(BK_APP_NAME+' · Backup terakhir: ',''))) +(meta.lastFile?bkBaris('Nama file terakhir',_hx(meta.lastFile)+(lm?' → '+lm:'')):'');
+  }
+  el.innerHTML='<div class="bk-box">'+bkBaris('Cara simpan',metode)+bkBaris('Nama file',nama)+bkBaris('Lokasi',lokasi)+terakhir+bkBaris('Cadangan otomatis','Brankas Data (IndexedDB browser)')+'</div><div style="font-size:11px;color:var(--text3);margin-top:6px">'+catatan+'</div>';
+}
 function renderBackupReminderUI(){
   const meta=getBackupMeta();
-  bkRenderNaming();
+  bkRenderNaming();renderBackupStatus();
   const info=document.getElementById('backup-last-info');
   if(info)info.textContent=fmtBackupInfo(meta);
   const on=document.getElementById('rmd-on'),off=document.getElementById('rmd-off');
@@ -6441,10 +6471,10 @@ async function idbGet(key){
 }
 function renderBackupFolderUI(){
   const row=document.getElementById('backup-folder-row'),btn=document.getElementById('btn-pilih-folder'),info=document.getElementById('backup-folder-info');
-  if(!window.showDirectoryPicker){if(row)row.style.display='none';if(btn)btn.style.display='none';return;}
+  if(!window.showDirectoryPicker){if(row)row.style.display='none';if(btn)btn.style.display='none';renderBackupStatus();return;}
   if(row)row.style.display='flex';if(btn)btn.style.display='';
   if(info)info.textContent=backupDirHandle?('Folder: '+backupDirHandle.name):'Folder belum dipilih';
-  bkRenderNaming();
+  bkRenderNaming();renderBackupStatus();
 }
 async function pilihLokasiBackup(){
   if(!window.showDirectoryPicker){toast('Browser ini tidak mendukung pilih folder, backup akan diunduh biasa.','error');return;}
@@ -6493,6 +6523,7 @@ async function bkWriteToSameFile(blob){
       }
       const w=await handle.createWritable();
       await w.write(blob);await w.close();
+      window._bkFileName=handle.name;
       return true;
     }catch(err){
       if(err&&err.name==='AbortError')return 'cancel';
@@ -6585,7 +6616,7 @@ async function backupData(){
         const fileHandle=await backupDirHandle.getFileHandle(namaTulis,{create:true});
         const writable=await fileHandle.createWritable();
         await writable.write(blob);await writable.close();
-        meta.lastBackup=new Date().toISOString();saveBackupMeta(meta);renderBackupReminderUI();
+        meta.lastBackup=new Date().toISOString();meta.lastFile=namaTulis;meta.lastMethod='folder';meta.lastPlace=backupDirHandle.name;saveBackupMeta(meta);renderBackupReminderUI();
         let catatan=null;
         if(bertanggal){
           let n=0;try{n=await bkBersihkan(backupDirHandle,namaTulis,meta.keep||1);}catch(e){}
@@ -6601,15 +6632,15 @@ async function backupData(){
   const r=await bkWriteToSameFile(blob);
   if(r==='cancel')return;
   if(r===true){
-    meta.lastBackup=new Date().toISOString();saveBackupMeta(meta);renderBackupReminderUI();
-    bkNotif(bkMeta,namaFile,true);
+    meta.lastBackup=new Date().toISOString();meta.lastFile=window._bkFileName||namaFile;meta.lastMethod='file';meta.lastPlace='';saveBackupMeta(meta);renderBackupReminderUI();
+    bkNotif(bkMeta,meta.lastFile,true);
     return;
   }
   // 3) Unduhan biasa dengan nama tetap
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=namaFile;a.click();
-  meta.lastBackup=new Date().toISOString();saveBackupMeta(meta);
+  meta.lastBackup=new Date().toISOString();meta.lastFile=namaFile;meta.lastMethod='download';meta.lastPlace='';saveBackupMeta(meta);
   renderBackupReminderUI();
-  bkNotif(bkMeta,namaFile,false);
+  bkNotif(bkMeta,namaFile,false,'Tersimpan di folder Unduhan (Download) browser/HP kamu.');
 }
 function restoreData(input){
   const file=input.files[0];if(!file)return;
