@@ -6025,16 +6025,47 @@ function renderBukuPreview(){
 }
 function _bukuHalaman(s,k){
   const trx=getTrxBySiswa(s.id);let run=0,ts=0,tt=0;
-  const rows=trx.map(t=>{const sT=t.jenis!=='tarik';run+=sT?t.nominal:-t.nominal;if(sT)ts+=t.nominal;else tt+=t.nominal;
-    return '<tr><td>'+fmtDatePrint(t.tanggal)+'</td><td class="l">'+_hx(t.ket||(sT?'Setor':'Tarik'))+'</td><td class="r">'+(sT?fmtRpPrint(t.nominal):'')+'</td><td class="r">'+(!sT?fmtRpPrint(t.nominal):'')+'</td><td class="r b">'+fmtRpPrint(run)+'</td></tr>';}).join('');
+  const rows=trx.map((t,i)=>{const sT=t.jenis!=='tarik';run+=sT?t.nominal:-t.nominal;if(sT)ts+=t.nominal;else tt+=t.nominal;
+    return '<tr class="'+(i%2===0?'even':'odd')+'">'
+      +'<td class="col-tgl">'+fmtDatePrint(t.tanggal)+'</td>'
+      +'<td class="l col-ket">'+_hx(t.ket||(sT?'Setor':'Tarik'))+'</td>'
+      +'<td class="r col-nom setor">'+(sT?fmtRpPrint(t.nominal):'')+'</td>'
+      +'<td class="r col-nom tarik">'+(!sT?fmtRpPrint(t.nominal):'')+'</td>'
+      +'<td class="r col-saldo b">'+fmtRpPrint(run)+'</td>'
+      +'</tr>';}).join('');
   const st=state.settings||{};
-  return '<section class="pg"><div class="kop"><div class="sk">'+_hx(st.namaSekolah||'Nama Sekolah')+'</div><div class="ss">'+_hx(st.alamat||'')+'</div></div>'
-   +'<h1>BUKU TABUNGAN SISWA</h1>'
-   +'<table class="id"><tr><td>Nama</td><td>: '+_hx(s.nama)+'</td><td>Kelas</td><td>: '+_hx(k.nama||'-')+'</td></tr><tr><td>NIS</td><td>: '+_hx(s.nis||'-')+'</td><td>Tahun ajaran</td><td>: '+_hx(st.ta||'-')+'</td></tr></table>'
-   +'<table class="tx"><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Setor</th><th>Tarik</th><th>Saldo</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="c">Belum ada transaksi</td></tr>')+'</tbody>'
-   +'<tfoot><tr><td colspan="2" class="r b">Total</td><td class="r b">'+fmtRpPrint(ts)+'</td><td class="r b">'+fmtRpPrint(tt)+'</td><td class="r b">'+fmtRpPrint(run)+'</td></tr></tfoot></table>'
-   +'<div class="ttd"><div>Wali kelas<br><br><br><br><u>'+_hx(k.wali||'..................')+'</u></div><div>Bendahara<br><br><br><br><u>'+_hx(st.bendahara||'..................')+'</u></div></div>'
-   +'<div class="dicetak">Dicetak '+fmtDatePrint(todayStr())+'</div></section>';
+  const nomorSiswa=s.absen?'No. '+s.absen:'';
+  return '<section class="pg">'
+   // ── HEADER / KOP ──
+   +'<div class="kop">'
+   +'<div class="kop-stripe"></div>'
+   +'<div class="kop-body">'
+   +'<div class="kop-logo"><svg width="34" height="34" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="17" fill="#1a5c3f"/><path d="M9 22l4-8 4 5 3-4 5 7H9z" fill="#fff" opacity=".9"/><circle cx="22" cy="11" r="2.5" fill="#fbbf24"/></svg></div>'
+   +'<div class="kop-text"><div class="sk">'+_hx(st.namaSekolah||'Nama Sekolah')+'</div><div class="ss">'+_hx(st.alamat||'')+'</div></div>'
+   +'</div>'
+   +'<div class="kop-bottom"></div>'
+   +'</div>'
+   // ── JUDUL ──
+   +'<div class="judul-wrap"><div class="judul-pill">BUKU TABUNGAN SISWA</div></div>'
+   // ── IDENTITAS ──
+   +'<div class="identitas">'
+   +'<div class="id-row"><span class="id-label">Nama</span><span class="id-sep">:</span><span class="id-val b">'+_hx(s.nama)+'</span><span class="id-label">Kelas</span><span class="id-sep">:</span><span class="id-val b">'+_hx(k.nama||'-')+'</span></div>'
+   +'<div class="id-row"><span class="id-label">NIS</span><span class="id-sep">:</span><span class="id-val">'+_hx(s.nis||'-')+'</span><span class="id-label">Tahun ajaran</span><span class="id-sep">:</span><span class="id-val">'+_hx(st.ta||'-')+'</span></div>'
+   +'</div>'
+   // ── TABEL TRANSAKSI ──
+   +'<table class="tx">'
+   +'<thead><tr><th class="col-tgl">Tanggal</th><th class="col-ket">Keterangan</th><th class="col-nom">Setor</th><th class="col-nom">Tarik</th><th class="col-saldo">Saldo</th></tr></thead>'
+   +'<tbody>'+(rows||'<tr><td colspan="5" class="c empty">Belum ada transaksi</td></tr>')+'</tbody>'
+   +'<tfoot><tr><td colspan="2" class="r b foot-label">Total</td><td class="r b foot-setor">'+fmtRpPrint(ts)+'</td><td class="r b foot-tarik">'+fmtRpPrint(tt)+'</td><td class="r b foot-saldo">'+fmtRpPrint(run)+'</td></tr></tfoot>'
+   +'</table>'
+   // ── TTD ──
+   +'<div class="ttd">'
+   +'<div class="ttd-box"><div class="ttd-role">Wali Kelas</div><div class="ttd-space"></div><div class="ttd-nama"><u>'+_hx(k.wali||'...................................')+'</u></div></div>'
+   +'<div class="ttd-box"><div class="ttd-role">Bendahara</div><div class="ttd-space"></div><div class="ttd-nama"><u>'+_hx(st.bendahara||'...................................')+'</u></div></div>'
+   +'</div>'
+   // ── FOOTER ──
+   +'<div class="foot-doc"><span>Dicetak: '+fmtDatePrint(todayStr())+'</span><span class="foot-brand">TabBend · '+_hx(st.namaSekolah||'Sekolah')+'</span></div>'
+   +'</section>';
 }
 function cetakBukuTabungan(){
   const kid=$('bt-kelas').value,sid=$('bt-siswa').value;
@@ -6042,7 +6073,67 @@ function cetakBukuTabungan(){
   const k=getKelas(kid);
   const ss=sid?[getSiswa(sid)]:state.siswa.filter(s=>s.kelasId===kid).sort((a,b)=>(a.absen||999)-(b.absen||999));
   if(!ss.length){toast('Kelas ini belum punya siswa','error');return;}
-  const css='@page{size:A5 portrait;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:11px;margin:0}.pg{page-break-after:always;padding:2mm}.pg:last-child{page-break-after:auto}.kop{text-align:center;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:10px}.sk{font-size:14px;font-weight:700}.ss{font-size:10px;color:#444;margin-top:2px}h1{font-size:13px;text-align:center;margin:8px 0 10px;letter-spacing:.5px}table{width:100%;border-collapse:collapse}.id td{padding:2px 4px;font-size:11px}.tx{margin-top:8px}.tx th,.tx td{border:1px solid #444;padding:4px 6px;text-align:center}.tx th{background:#eee}.tx .l{text-align:left}.tx .r{text-align:right}.b{font-weight:700}.tx tfoot td{background:#f5f5f5}.ttd{display:flex;justify-content:space-around;text-align:center;margin-top:22px}.dicetak{margin-top:14px;font-size:9px;color:#666;text-align:right}';
+  /* ── CSS CETAK PROFESIONAL ── */
+  const css=[
+    '@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");',
+    '@page{size:A4 portrait;margin:14mm 14mm 14mm 14mm}',
+    '*{box-sizing:border-box;margin:0;padding:0}',
+    'body{font-family:"Plus Jakarta Sans",Arial,sans-serif;color:#1a1a2e;font-size:10.5px;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
+    /* halaman */
+    '.pg{page-break-after:always;padding:0}.pg:last-child{page-break-after:auto}',
+    /* kop */
+    '.kop{margin-bottom:10px}',
+    '.kop-stripe{height:5px;background:linear-gradient(90deg,#1a5c3f 0%,#2d9e6b 60%,#fbbf24 100%);border-radius:3px 3px 0 0}',
+    '.kop-body{display:flex;align-items:center;gap:10px;padding:8px 10px 6px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb}',
+    '.kop-logo{flex-shrink:0}',
+    '.kop-text{flex:1;text-align:center}',
+    '.sk{font-size:13.5px;font-weight:800;color:#1a3c2e;letter-spacing:.3px}',
+    '.ss{font-size:9.5px;color:#4b5563;margin-top:1px}',
+    '.kop-bottom{height:2px;background:#1a5c3f;border-radius:0 0 2px 2px}',
+    /* judul */
+    '.judul-wrap{text-align:center;margin:10px 0 8px}',
+    '.judul-pill{display:inline-block;background:#1a5c3f;color:#fff;font-size:11px;font-weight:800;letter-spacing:1.5px;padding:4px 20px;border-radius:30px}',
+    /* identitas */
+    '.identitas{background:#f8fffe;border:1px solid #d1fae5;border-radius:6px;padding:7px 10px;margin-bottom:10px}',
+    '.id-row{display:flex;align-items:baseline;gap:2px;margin-bottom:3px;font-size:10.5px}',
+    '.id-row:last-child{margin-bottom:0}',
+    '.id-label{color:#374151;width:82px;flex-shrink:0;font-size:10px}',
+    '.id-sep{color:#9ca3af;margin-right:4px;flex-shrink:0}',
+    '.id-val{flex:1;min-width:0}',
+    '.id-val.b{font-weight:700;color:#1a3c2e}',
+    /* tabel */
+    'table.tx{width:100%;border-collapse:collapse;font-size:10px}',
+    'table.tx thead tr{background:#1a5c3f}',
+    'table.tx thead th{color:#fff;padding:5px 7px;text-align:center;font-weight:700;font-size:9.5px;letter-spacing:.3px;border:1px solid #0f3d28}',
+    'table.tx tbody tr.even{background:#fff}',
+    'table.tx tbody tr.odd{background:#f0fdf8}',
+    'table.tx tbody td{border:1px solid #d1fae5;padding:4px 7px;vertical-align:middle}',
+    'table.tx tbody td.empty{text-align:center;color:#9ca3af;padding:16px;font-style:italic}',
+    'table.tx tfoot tr{background:#f8fffe}',
+    'table.tx tfoot td{border:1px solid #6ee7b7;padding:5px 7px;font-size:10px}',
+    '.col-tgl{white-space:nowrap;width:22%}',
+    '.col-ket{text-align:left;width:30%}',
+    '.col-nom{width:16%}',
+    '.col-saldo{width:16%}',
+    '.l{text-align:left}.r{text-align:right}.c{text-align:center}.b{font-weight:700}',
+    /* warna kolom */
+    'td.setor{color:#059669;font-weight:600}',
+    'td.tarik{color:#dc2626;font-weight:600}',
+    'td.col-saldo{color:#1a3c2e;font-weight:700}',
+    '.foot-label{background:#1a5c3f!important;color:#fff;font-size:10.5px;border-radius:0 0 0 4px}',
+    '.foot-setor{background:#d1fae5!important;color:#065f46;font-weight:800}',
+    '.foot-tarik{background:#fee2e2!important;color:#991b1b;font-weight:800}',
+    '.foot-saldo{background:#1a5c3f!important;color:#fff;font-weight:800;border-radius:0 0 4px 0}',
+    /* ttd */
+    '.ttd{display:flex;justify-content:flex-end;gap:40px;margin-top:16px;padding:0 4px}',
+    '.ttd-box{text-align:center;min-width:120px}',
+    '.ttd-role{font-size:9.5px;font-weight:700;color:#1a3c2e;margin-bottom:2px}',
+    '.ttd-space{height:38px;border-bottom:1px dashed #9ca3af;margin:0 8px}',
+    '.ttd-nama{font-size:9px;margin-top:3px;color:#374151}',
+    /* footer doc */
+    '.foot-doc{margin-top:10px;display:flex;justify-content:space-between;font-size:8.5px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:5px}',
+    '.foot-brand{font-weight:600;color:#1a5c3f}'
+  ].join('\n');
   const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Buku Tabungan Kelas '+_hx(k.nama)+'</title><style>'+css+'</style></head><body>'+ss.map(s=>_bukuHalaman(s,k)).join('')+'<script>window.onload=function(){window.print();}<\/script></body></html>';
   openPrintBlob(html);
 }
